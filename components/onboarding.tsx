@@ -107,7 +107,7 @@ export function Onboarding() {
           )}
 
           {step === 0 && (
-            <button onClick={dismiss} className="text-xs text-white/20 hover:text-white/40 py-1 transition-colors">
+            <button onClick={dismiss} className="text-xs text-white/45 hover:text-white/40 py-1 transition-colors">
               Bỏ qua, tôi biết rồi
             </button>
           )}

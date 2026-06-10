@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Plus, Users, Lock, Globe, ChevronRight, Copy, Check, Search, Loader2 } from "lucide-react"
+import { useToast } from "@/components/toast"
 import { cn } from "@/lib/utils"
 
 interface GroupItem {
@@ -13,42 +14,47 @@ interface GroupItem {
 
 export function GroupsView({ groups }: { groups: GroupItem[] }) {
   const router = useRouter()
+  const toast = useToast()
   const [showCreate, setShowCreate] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
   const [groupName, setGroupName] = useState("")
   const [visibility, setVisibility] = useState<"public" | "private">("private")
   const [joinCode, setJoinCode] = useState("")
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [joinError, setJoinError] = useState<string | null>(null)
 
   function copyCode(code: string) {
     navigator.clipboard.writeText(code)
     setCopied(code)
+    toast.success("Đã copy mã mời")
     setTimeout(() => setCopied(null), 2000)
   }
 
   async function createGroup() {
-    setSubmitting(true); setError(null)
+    setSubmitting(true); setCreateError(null)
     try {
       const res = await fetch("/api/groups", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: groupName, visibility }) })
       const data = await res.json()
-      if (!res.ok) { setError(data.error); return }
+      if (!res.ok) { setCreateError(data.error); toast.error(data.error ?? "Không tạo được hội"); return }
       setShowCreate(false); setGroupName("")
+      toast.success(`Đã tạo hội "${groupName}" 🎉`)
       router.refresh()
-    } catch { setError("Lỗi mạng") }
+    } catch { setCreateError("Lỗi mạng"); toast.error("Lỗi mạng, thử lại nhé") }
     finally { setSubmitting(false) }
   }
 
   async function joinGroup() {
     if (!joinCode.trim()) return
-    setSubmitting(true); setError(null)
+    setSubmitting(true); setJoinError(null)
     try {
       const res = await fetch(`/api/groups/_/join`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ inviteCode: joinCode }) })
       const data = await res.json()
-      if (!res.ok) { setError(data.error); return }
+      if (!res.ok) { setJoinError(data.error); toast.error(data.error ?? "Không vào được hội"); return }
       setJoinCode("")
+      toast.success("Đã tham gia hội! 🤝")
       router.refresh()
-    } catch { setError("Lỗi mạng") }
+    } catch { setJoinError("Lỗi mạng"); toast.error("Lỗi mạng, thử lại nhé") }
     finally { setSubmitting(false) }
   }
 
@@ -86,7 +92,7 @@ export function GroupsView({ groups }: { groups: GroupItem[] }) {
           <h2 className="font-bold text-white mb-3">Tạo hội mới</h2>
           <div className="space-y-3">
             <input type="text" placeholder="Tên hội..." value={groupName} onChange={e => setGroupName(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-[#00e676]/30"
+              className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/35 focus:outline-none focus:ring-1 focus:ring-[#00e676]/30"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }} />
             <div className="grid grid-cols-2 gap-2">
               {[
@@ -102,11 +108,11 @@ export function GroupsView({ groups }: { groups: GroupItem[] }) {
                     <Icon size={13} style={{ color: visibility === id ? "#00e676" : "rgba(255,255,255,0.3)" }} />
                     <span className="text-sm font-semibold" style={{ color: visibility === id ? "#00e676" : "rgba(255,255,255,0.6)" }}>{label}</span>
                   </div>
-                  <p className="text-xs text-white/25">{desc}</p>
+                  <p className="text-xs text-white/50">{desc}</p>
                 </button>
               ))}
             </div>
-            {error && <p className="text-xs text-red-400">{error}</p>}
+            {createError && <p className="text-xs text-red-400">{createError}</p>}
             <div className="flex gap-2">
               <button onClick={() => setShowCreate(false)}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white/40"
@@ -127,18 +133,18 @@ export function GroupsView({ groups }: { groups: GroupItem[] }) {
         <p className="text-sm font-bold text-white/60 mb-2">Tham gia hội bằng mã</p>
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50" />
             <input type="text" placeholder="Nhập mã hội (VD: IT26XA)" value={joinCode} onChange={e => setJoinCode(e.target.value)}
-              className="w-full pl-8 pr-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 uppercase focus:outline-none focus:ring-1 focus:ring-[#00e676]/30"
+              className="w-full pl-8 pr-3 py-2.5 rounded-xl text-sm text-white placeholder-white/35 uppercase focus:outline-none focus:ring-1 focus:ring-[#00e676]/30"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }} />
           </div>
           <button onClick={joinGroup} disabled={submitting} className="px-4 py-2.5 rounded-xl text-sm font-bold"
             style={{ background: "rgba(255,255,255,0.08)", color: "white" }}>Vào</button>
         </div>
-        {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+        {joinError && <p className="text-xs text-red-400 mt-2">{joinError}</p>}
       </div>
 
-      <p className="text-xs font-bold text-white/25 uppercase tracking-widest mb-3">
+      <p className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">
         Đang tham gia ({groups.length})
       </p>
       <div className="flex flex-col gap-4">
@@ -163,11 +169,11 @@ export function GroupsView({ groups }: { groups: GroupItem[] }) {
                     <span style={{ color: "#ffd700" }} className="font-bold">{group.totalPoints} xu</span>
                   </div>
                 </div>
-                <ChevronRight size={16} className="text-white/15 group-hover:text-white/30 mt-0.5" />
+                <ChevronRight size={16} className="text-white/40 group-hover:text-white/30 mt-0.5" />
               </div>
-              <p className="text-xs text-white/20 italic mb-3 truncate">&ldquo;{group.recentActivity}&rdquo;</p>
+              <p className="text-xs text-white/45 italic mb-3 truncate">&ldquo;{group.recentActivity}&rdquo;</p>
               <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                <span className="text-xs text-white/20">Mã mời</span>
+                <span className="text-xs text-white/45">Mã mời</span>
                 <button onClick={e => { e.preventDefault(); copyCode(group.inviteCode) }}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold hover:bg-white/5"
                   style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)" }}>

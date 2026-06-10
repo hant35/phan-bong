@@ -52,7 +52,7 @@ export function ProfileView({ user, badges, statsByType, recentPicks, rankContex
                     <span className="text-xs font-bold" style={{ color: "#ffd700" }}>🌙 {user.displayName}</span>
                   </div>
                 )}
-                <p className="text-xs text-white/25 mt-1">Tham gia từ {new Date(user.createdAt).toLocaleDateString("vi-VN")}</p>
+                <p className="text-xs text-white/50 mt-1">Tham gia từ {new Date(user.createdAt).toLocaleDateString("vi-VN")}</p>
               </div>
             </div>
             <button onClick={logout} className="p-2 rounded-xl hover:bg-white/5 transition-colors" title="Đăng xuất">
@@ -86,7 +86,7 @@ export function ProfileView({ user, badges, statsByType, recentPicks, rankContex
         ].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setTab(id as typeof tab)}
             className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all",
-              tab === id ? "text-white" : "text-white/25")}
+              tab === id ? "text-white" : "text-white/50")}
             style={tab === id ? { background: "rgba(255,255,255,0.07)" } : {}}>
             <Icon size={13} />{label}
           </button>
@@ -175,7 +175,7 @@ export function ProfileView({ user, badges, statsByType, recentPicks, rankContex
             {statsByType.map(({ type, correct, total, color, disabled }) => (
               <div key={type} className={cn("mb-3", disabled && "opacity-40")}>
                 <div className="flex justify-between text-sm mb-1.5">
-                  <span className="text-white/50">{type}{disabled && <span className="text-[10px] ml-1 text-white/20">· Sắp ra mắt</span>}</span>
+                  <span className="text-white/50">{type}{disabled && <span className="text-[10px] ml-1 text-white/45">· Sắp ra mắt</span>}</span>
                   <span className="font-bold text-white">{!disabled && total > 0 ? `${correct}/${total} (${Math.round(correct/total*100)}%)` : "—"}</span>
                 </div>
                 <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
@@ -197,7 +197,7 @@ export function ProfileView({ user, badges, statsByType, recentPicks, rankContex
                 : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
               <div className="text-3xl mb-2">{badge.emoji}</div>
               <div className={cn("text-sm font-bold mb-1", badge.earned ? "text-white" : "text-white/30")}>{badge.name}</div>
-              <p className="text-xs text-white/25">{badge.description}</p>
+              <p className="text-xs text-white/50">{badge.description}</p>
               {badge.earned && (
                 <span className="inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded-full"
                   style={{ background: "rgba(255,215,0,0.15)", color: "#ffd700" }}>Đã đạt ✓</span>

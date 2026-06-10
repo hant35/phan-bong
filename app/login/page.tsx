@@ -1,7 +1,8 @@
 "use client"
 
-import { useSearchParams } from "next/navigation"
-import { Suspense } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import { Suspense, useState } from "react"
+import { Loader2 } from "lucide-react"
 
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_state: "Phiên đăng nhập hết hạn, vui lòng thử lại.",
@@ -12,7 +13,29 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 function LoginContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const error = searchParams.get("error")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [pwError, setPwError] = useState<string | null>(null)
+
+  async function loginPassword() {
+    if (!email.trim() || !password) return
+    setSubmitting(true); setPwError(null)
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setPwError(data.error ?? "Email hoặc mật khẩu không đúng"); return }
+      router.push("/")
+      router.refresh()
+    } catch { setPwError("Lỗi mạng, thử lại nhé") }
+    finally { setSubmitting(false) }
+  }
 
   return (
     <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden" style={{ background: "#0a0c12" }}>
@@ -69,9 +92,35 @@ function LoginContent() {
             </svg>
             Tiếp tục với Google
           </a>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-1">
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-xs text-white/40">hoặc</span>
+            <div className="flex-1 h-px bg-white/10" />
+          </div>
+
+          {/* Email / password */}
+          <div className="flex flex-col gap-2.5">
+            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}
+              autoComplete="email"
+              className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/35 focus:outline-none focus:ring-1 focus:ring-[#00e676]/40"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            <input type="password" placeholder="Mật khẩu" value={password} onChange={e => setPassword(e.target.value)}
+              autoComplete="current-password"
+              onKeyDown={e => e.key === "Enter" && loginPassword()}
+              className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/35 focus:outline-none focus:ring-1 focus:ring-[#00e676]/40"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            {pwError && <p className="text-xs text-red-400 text-center">{pwError}</p>}
+            <button onClick={loginPassword} disabled={submitting || !email.trim() || !password}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all active:scale-95 disabled:opacity-40"
+              style={{ background: "linear-gradient(135deg, #00e676, #00bcd4)", color: "#0f1117" }}>
+              {submitting && <Loader2 size={15} className="animate-spin" />} Đăng nhập
+            </button>
+          </div>
         </div>
 
-        <p className="text-center text-xs text-white/15 mt-5">
+        <p className="text-center text-xs text-white/40 mt-5">
           Không tiền thật. Không cá cược. Thuần điểm vui.
         </p>
       </div>

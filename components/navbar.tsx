@@ -11,7 +11,6 @@ const navItems = [
   { href: "/leaderboard", label: "Bảng vàng", icon: "Trophy" as const },
   { href: "/groups", label: "Hội", icon: "Users" as const },
   { href: "/history", label: "Lịch sử", icon: "History" as const },
-  { href: "/profile", label: "Hồ sơ", icon: "User" as const },
 ]
 
 export async function Navbar() {

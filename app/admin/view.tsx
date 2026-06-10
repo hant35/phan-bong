@@ -401,14 +401,14 @@ export function AdminView({
                       <Image src={flagUrl(m.homeFlag)} alt="" fill className="object-cover" unoptimized />
                     </div>
                     <span className="font-bold text-white text-xs sm:text-sm truncate max-w-[80px] sm:max-w-none">{m.homeTeam}</span>
-                    <span className="text-white/20 text-xs font-black">VS</span>
+                    <span className="text-white/45 text-xs font-black">VS</span>
                     <span className="font-bold text-white text-xs sm:text-sm truncate max-w-[80px] sm:max-w-none">{m.awayTeam}</span>
                     <div className="relative w-8 h-5 rounded overflow-hidden flex-shrink-0">
                       <Image src={flagUrl(m.awayFlag)} alt="" fill className="object-cover" unoptimized />
                     </div>
                     <div className="ml-auto flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                       <span className="text-[10px] text-white/30">{dt.time}</span>
-                      <span className="text-[10px] text-white/20 hidden sm:inline">{dt.date}</span>
+                      <span className="text-[10px] text-white/45 hidden sm:inline">{dt.date}</span>
                       <span className={cn(
                         "text-[10px] font-bold px-2 py-0.5 rounded-full",
                         m.status === "scheduled" ? "bg-blue-500/15 text-blue-400" :
@@ -463,7 +463,7 @@ export function AdminView({
                           className="w-full px-2 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white text-center focus:outline-none focus:border-[#00e676]/50"
                           placeholder="H"
                         />
-                        <span className="text-white/20 font-bold">–</span>
+                        <span className="text-white/45 font-bold">–</span>
                         <input type="number" min="0"
                           value={edits.scoreAway ?? m.scoreAway ?? ""}
                           onChange={e => editMatch(m.id, "scoreAway", e.target.value ? parseInt(e.target.value) : null)}
@@ -476,7 +476,7 @@ export function AdminView({
 
                   {/* Footer */}
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
-                    <div className="flex items-center gap-3 text-[10px] text-white/25">
+                    <div className="flex items-center gap-3 text-[10px] text-white/50">
                       <span>{m.stage}</span>
                       <span>·</span>
                       <span>{m.predictionsCount} lượt đoán</span>
@@ -488,7 +488,7 @@ export function AdminView({
                         </span>
                       )}
                       <button onClick={() => deleteMatch(m.id, `${m.homeTeam} vs ${m.awayTeam}`)}
-                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-white/20 hover:text-red-400 transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-white/45 hover:text-red-400 transition-colors"
                         title="Xóa trận">
                         <Trash2 size={14} />
                       </button>
@@ -526,7 +526,7 @@ export function AdminView({
                     <div className="flex items-center gap-2">
                       <Users size={16} className="text-[#00bcd4]" />
                       <span className="font-bold text-white">{g.name}</span>
-                      <span className="text-[10px] text-white/20 bg-white/5 px-2 py-0.5 rounded-full">{g.memberCount} người</span>
+                      <span className="text-[10px] text-white/45 bg-white/5 px-2 py-0.5 rounded-full">{g.memberCount} người</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <button onClick={() => setExpandedGroup(expanded ? null : g.id)}
@@ -577,7 +577,7 @@ export function AdminView({
 
                   {/* Info */}
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
-                    <div className="flex items-center gap-3 text-[10px] text-white/25">
+                    <div className="flex items-center gap-3 text-[10px] text-white/50">
                       <span>Mã mời: <span className="text-white/50 font-mono">{g.inviteCode}</span></span>
                       <span>·</span>
                       <span>Admin: {g.adminName}</span>
@@ -660,7 +660,7 @@ export function AdminView({
                       <div className="mt-0.5">
                         {selected
                           ? <CheckSquare size={18} className="text-[#00e676]" />
-                          : <Square size={18} className="text-white/20" />
+                          : <Square size={18} className="text-white/45" />
                         }
                       </div>
                       <div className="flex-1 min-w-0">
@@ -702,7 +702,7 @@ export function AdminView({
                               onChange={e => setApiKeys(p => ({ ...p, [src.id]: e.target.value }))}
                               onClick={e => e.stopPropagation()}
                               placeholder="Nhập API key..."
-                              className="w-full px-3 py-2 pr-16 rounded-lg bg-white/5 border border-white/10 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-[#00e676]/50 font-mono"
+                              className="w-full px-3 py-2 pr-16 rounded-lg bg-white/5 border border-white/10 text-xs text-white placeholder:text-white/45 focus:outline-none focus:border-[#00e676]/50 font-mono"
                             />
                             <button
                               onClick={e => { e.stopPropagation(); setShowKeys(p => ({ ...p, [src.id]: !p[src.id] })) }}
@@ -718,7 +718,7 @@ export function AdminView({
                             {keySaving === src.id ? "..." : keySavedId === src.id ? <><Check size={12} /> Đã lưu</> : <><Save size={12} /> Lưu</>}
                           </button>
                         </div>
-                        <p className="text-[10px] text-white/20 mt-1">
+                        <p className="text-[10px] text-white/45 mt-1">
                           {apiKeys[src.id] && keysLoaded
                             ? <span className="text-[#00e676]/60">✓ Key đã lưu trong hệ thống</span>
                             : <>Nhập key sẽ được lưu lại. Để trống dùng key từ <code className="text-white/30 bg-white/5 px-1 rounded">.env</code></>
@@ -879,7 +879,7 @@ export function AdminView({
               <p className="text-xs text-white/40 uppercase font-bold mb-2">Tiêu đề</p>
               <input value={notifyTitle} onChange={e => setNotifyTitle(e.target.value)}
                 placeholder="VD: ⚽ Trận đấu sắp bắt đầu!"
-                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none"
+                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/35 outline-none"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
             </div>
 
@@ -889,7 +889,7 @@ export function AdminView({
               <textarea value={notifyBody} onChange={e => setNotifyBody(e.target.value)}
                 placeholder="Nội dung thông báo..."
                 rows={3}
-                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none resize-none"
+                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/35 outline-none resize-none"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
             </div>
 
@@ -898,7 +898,7 @@ export function AdminView({
               <p className="text-xs text-white/40 uppercase font-bold mb-2">URL khi bấm vào <span className="normal-case font-normal">(không bắt buộc)</span></p>
               <input value={notifyUrl} onChange={e => setNotifyUrl(e.target.value)}
                 placeholder="/matches hoặc /groups/..."
-                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none"
+                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/35 outline-none"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
             </div>
 
@@ -951,7 +951,7 @@ export function AdminView({
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
             <input value={userSearch} onChange={e => setUserSearch(e.target.value)}
               placeholder="Tìm tên hoặc email..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-white placeholder-white/35 outline-none"
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }} />
           </div>
 
@@ -1239,7 +1239,7 @@ export function AdminView({
               {/* Flags */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-white/40 mb-1 block">Mã cờ nhà * <span className="text-white/20">(vn, jp...)</span></label>
+                  <label className="text-xs text-white/40 mb-1 block">Mã cờ nhà * <span className="text-white/45">(vn, jp...)</span></label>
                   <input value={newMatch.homeFlag} onChange={e => setNewMatch(p => ({ ...p, homeFlag: e.target.value.toLowerCase() }))}
                     className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-[#00e676] outline-none" placeholder="vn" />
                 </div>
@@ -1401,9 +1401,9 @@ export function AdminView({
                 <div className="space-y-1">
                   {gradingResult.skippedUsers.map((s, i) => (
                     <div key={i} className="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-white/[0.02]">
-                      <span className="text-white/20 text-sm">⊘</span>
+                      <span className="text-white/45 text-sm">⊘</span>
                       <span className="text-sm text-white/40 flex-1 truncate">{s.name}</span>
-                      <span className="text-[10px] text-white/20">{s.groupName}</span>
+                      <span className="text-[10px] text-white/45">{s.groupName}</span>
                     </div>
                   ))}
                 </div>

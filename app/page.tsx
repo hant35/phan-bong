@@ -242,7 +242,7 @@ export default async function HomePage() {
                     <span className="text-white/40"> {item.action} </span>
                     <span className="font-semibold" style={{ color: activityColors[item.type] ?? "#7c3aed" }}>{item.target}</span>
                   </p>
-                  <div className="text-[10px] text-white/25 mt-0.5">{timeAgo(item.createdAt)}</div>
+                  <div className="text-[10px] text-white/50 mt-0.5">{timeAgo(item.createdAt)}</div>
                 </div>
               </div>
             ))}
@@ -267,7 +267,7 @@ export default async function HomePage() {
                         <div className="text-xs font-bold text-white truncate">{g.name}</div>
                         <div className="text-[10px] text-white/30">{g.memberCount} người · Hạng #{g.myRank}</div>
                       </div>
-                      <ChevronRight size={12} className="text-white/20" />
+                      <ChevronRight size={12} className="text-white/45" />
                     </div>
                   </div>
                 </Link>

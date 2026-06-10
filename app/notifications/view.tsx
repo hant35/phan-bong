@@ -86,7 +86,7 @@ export function NotificationsView({ notifications: initial }: { notifications: N
       </div>
 
       {notifications.length === 0 ? (
-        <div className="text-center py-20 text-white/15">
+        <div className="text-center py-20 text-white/40">
           <div className="text-4xl mb-3">🔔</div>
           <p className="text-sm font-medium">Chưa có thông báo</p>
           <p className="text-xs mt-1">Đi đoán trận đi, sẽ có thông báo thôi!</p>
@@ -109,7 +109,7 @@ export function NotificationsView({ notifications: initial }: { notifications: N
                     {n.title}
                   </p>
                   <p className="text-xs text-white/30 mt-0.5 leading-relaxed">{n.body}</p>
-                  <p className="text-[10px] text-white/15 mt-1.5">{timeAgo(n.createdAt)}</p>
+                  <p className="text-[10px] text-white/40 mt-1.5">{timeAgo(n.createdAt)}</p>
                 </div>
                 {!n.read && (
                   <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ background: "#00e676" }} />

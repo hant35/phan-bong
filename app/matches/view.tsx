@@ -116,7 +116,7 @@ export function MatchesView({ matches, myPickedCount, userPoints }: {
 
       <div className="space-y-3">
         {filtered.length === 0 ? (
-          <div className="text-center py-16 text-white/20">
+          <div className="text-center py-16 text-white/45">
             <div className="text-5xl mb-3">🔍</div>
             <p className="font-medium">Không tìm thấy trận nào</p>
           </div>

@@ -105,7 +105,7 @@ export function HistoryView({ picks }: { picks: Pick[] }) {
 
       <div className="space-y-2">
         {filtered.length === 0 ? (
-          <div className="text-center py-16 text-white/20">
+          <div className="text-center py-16 text-white/45">
             <div className="text-5xl mb-3">🔍</div>
             <p className="font-medium">Chưa có dự đoán nào</p>
           </div>

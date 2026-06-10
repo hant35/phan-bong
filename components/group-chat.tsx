@@ -119,10 +119,10 @@ export function GroupChat({ groupId, currentUserId }: { groupId: string; current
       <div className="overflow-y-auto hide-scrollbar px-4 py-3 space-y-0.5"
         style={{ height: "min(380px, 48vh)" }}>
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-white/15 py-8">
+          <div className="flex flex-col items-center justify-center h-full text-white/40 py-8">
             <div className="text-5xl mb-3">🗣️</div>
             <p className="text-sm font-bold">Chưa có ai nói gì</p>
-            <p className="text-xs mt-1 text-white/20">Hãy là người phá vỡ sự im lặng! 😏</p>
+            <p className="text-xs mt-1 text-white/45">Hãy là người phá vỡ sự im lặng! 😏</p>
           </div>
         ) : (
           messages.map((msg, i) => {
@@ -159,7 +159,7 @@ export function GroupChat({ groupId, currentUserId }: { groupId: string; current
                       {msg.text}
                     </div>
                   )}
-                  <div className={cn("text-[9px] text-white/15 mt-0.5", isMe ? "text-right mr-1" : "ml-1")}>
+                  <div className={cn("text-[9px] text-white/40 mt-0.5", isMe ? "text-right mr-1" : "ml-1")}>
                     {timeAgo(msg.createdAt)}
                   </div>
                 </div>
@@ -188,7 +188,7 @@ export function GroupChat({ groupId, currentUserId }: { groupId: string; current
             <div className="space-y-2">
               {STICKER_PACKS.map(pack => (
                 <div key={pack.label}>
-                  <div className="text-[10px] font-bold text-white/20 uppercase tracking-wider mb-1">{pack.label}</div>
+                  <div className="text-[10px] font-bold text-white/45 uppercase tracking-wider mb-1">{pack.label}</div>
                   <div className="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1">
                     {pack.stickers.map(s => (
                       <button key={s} onClick={() => send(s)}
@@ -225,7 +225,7 @@ export function GroupChat({ groupId, currentUserId }: { groupId: string; current
             onFocus={() => setShowPicker(false)}
             placeholder="Nói gì đó với hội..."
             maxLength={500}
-            className="w-full h-10 rounded-xl px-4 text-sm text-white placeholder:text-white/20 outline-none"
+            className="w-full h-10 rounded-xl px-4 text-sm text-white placeholder:text-white/45 outline-none"
             style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
           />
         </div>
@@ -233,7 +233,7 @@ export function GroupChat({ groupId, currentUserId }: { groupId: string; current
           className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all",
             text.trim() ? "hover:scale-105 active:scale-95" : "opacity-30")}
           style={{ background: text.trim() ? "linear-gradient(135deg, #00e676, #00bcd4)" : "rgba(255,255,255,0.04)" }}>
-          <Send size={16} className={text.trim() ? "text-[#0f1117]" : "text-white/20"} />
+          <Send size={16} className={text.trim() ? "text-[#0f1117]" : "text-white/45"} />
         </button>
       </div>
     </div>

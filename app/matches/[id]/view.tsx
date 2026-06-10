@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, Lock, BarChart3, Users, Zap, Cloud, MapPin, Trophy, Flame, Info, Loader2 } from "lucide-react"
 import { LivePanel } from "@/components/live-panel"
 import { MatchChatBar } from "@/components/match-chat"
+import { useToast } from "@/components/toast"
 import { cn } from "@/lib/utils"
 import { flagUrl, formatDateTimeParts } from "@/lib/format"
 
@@ -14,7 +15,6 @@ const BET_TYPES = [
   { id: "ah", label: "Kèo chấp", emoji: "⚖️", enabled: true },
   { id: "ou", label: "Tài / Xỉu", emoji: "📊", enabled: true },
   { id: "exact", label: "Tỉ số", emoji: "🎯", enabled: true },
-  { id: "1x2", label: "1X2", emoji: "🏆", enabled: false },
 ]
 
 interface Match {
@@ -36,6 +36,7 @@ interface Match {
 
 export function MatchDetailView({ match, currentUserId, commentCount, isInGroup }: { match: Match; currentUserId: string; commentCount: number; isInGroup: boolean }) {
   const router = useRouter()
+  const toast = useToast()
   const searchParams = useSearchParams()
   const backUrl = searchParams.get("from") ?? "/matches"
   const backLabel = backUrl.startsWith("/groups/") ? "← Hội" : "← Lịch trận"
@@ -62,10 +63,11 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
       else body.side = pick
       const res = await fetch("/api/predictions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       const data = await res.json()
-      if (!res.ok) { setError(data.error ?? "Có lỗi"); return }
+      if (!res.ok) { setError(data.error ?? "Có lỗi"); toast.error(data.error ?? "Không lưu được dự đoán"); return }
       setSubmitted(true)
+      toast.success("Đã lưu dự đoán! 🎯")
       router.refresh()
-    } catch { setError("Lỗi mạng") }
+    } catch { setError("Lỗi mạng"); toast.error("Lỗi mạng, thử lại nhé") }
     finally { setSubmitting(false) }
   }
 
@@ -104,11 +106,11 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
             <div className="text-center flex-shrink-0">
               {match.status !== "scheduled" ? (
                 <div className="score-font text-5xl font-black text-white">
-                  {match.scoreHome}<span className="text-white/20 mx-1">–</span>{match.scoreAway}
+                  {match.scoreHome}<span className="text-white/45 mx-1">–</span>{match.scoreAway}
                 </div>
               ) : (
                 <>
-                  <div className="text-white/15 font-black text-3xl">VS</div>
+                  <div className="text-white/40 font-black text-3xl">VS</div>
                   <div className="text-white/50 text-sm font-bold mt-1">{formatDateTimeParts(kickoff).time}</div>
                   <div className="text-white/30 text-xs mt-0.5">{formatDateTimeParts(kickoff).date}</div>
                 </>
@@ -128,9 +130,9 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
                 <div className="text-[10px] text-white/30 uppercase tracking-widest mb-1">H2H</div>
                 <div className="flex items-center gap-1 text-xs font-black">
                   <span style={{ color: match.homeColor ?? "#00e676" }}>{match.h2h.home}</span>
-                  <span className="text-white/20">–</span>
+                  <span className="text-white/45">–</span>
                   <span style={{ color: "#ffd700" }}>{match.h2h.draw}</span>
-                  <span className="text-white/20">–</span>
+                  <span className="text-white/45">–</span>
                   <span style={{ color: match.awayColor ?? "#00bcd4" }}>{match.h2h.away}</span>
                 </div>
               </div>
@@ -179,7 +181,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
         ].map(({ id: tid, label, icon: Icon }) => (
           <button key={tid} onClick={() => setTab(tid as typeof tab)}
             className={cn("flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all",
-              tab === tid ? "text-white" : "text-white/25")}
+              tab === tid ? "text-white" : "text-white/50")}
             style={tab === tid ? { background: "rgba(255,255,255,0.08)" } : {}}>
             <Icon size={14} /> {label}
           </button>
@@ -204,9 +206,9 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
             </div>
           ) : isLocked ? (
             <div className="glass rounded-2xl p-6 text-center">
-              <Lock size={28} className="mx-auto mb-3 text-white/20" />
+              <Lock size={28} className="mx-auto mb-3 text-white/45" />
               <p className="font-bold text-white/50">Kèo đã khóa</p>
-              <p className="text-sm text-white/25 mt-1">{match.status === "live" ? "Trận đang diễn ra" : "Trận đã kết thúc"}</p>
+              <p className="text-sm text-white/50 mt-1">{match.status === "live" ? "Trận đang diễn ra" : "Trận đã kết thúc"}</p>
               {match.myPick && (
                 <div className="mt-4 inline-block rounded-xl px-4 py-2"
                   style={{ background: match.myPick.result === "win" ? "rgba(0,230,118,0.1)" : "rgba(255,82,82,0.1)" }}>
@@ -226,7 +228,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
                      betType === "ou" ? `Tài/Xỉu → ${pick === "over" ? "Tài" : "Xỉu"}` :
                      `Kèo → ${pick === "home" ? match.homeTeam : pick === "away" ? match.awayTeam : "Hòa"}`}
                   </p>
-                  <p className="text-xs text-white/20 mt-1">
+                  <p className="text-xs text-white/45 mt-1">
                     Còn {Math.max(0, Math.floor((kickoff.getTime() - Date.now()) / 60000))}p nữa có thể sửa
                   </p>
                 </div>
@@ -237,7 +239,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {BET_TYPES.map(bt => (
                   <button key={bt.id}
                     onClick={() => bt.enabled && (setBetType(bt.id), setPick(null))}
@@ -248,7 +250,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
                       : { background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.06)" }}>
                     <div className="text-xl mb-1">{bt.emoji}</div>
                     <div className={cn("text-xs font-bold", betType === bt.id && bt.enabled ? "text-[#00e676]" : "text-white/40")}>{bt.label}</div>
-                    {!bt.enabled && <div className="text-[9px] text-white/25 mt-0.5">Sắp ra mắt</div>}
+                    {!bt.enabled && <div className="text-[9px] text-white/50 mt-0.5">Sắp ra mắt</div>}
                   </button>
                 ))}
               </div>
@@ -332,7 +334,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
                           className="w-8 h-8 rounded-xl font-bold" style={{ background: "rgba(0,230,118,0.15)", color: "#00e676" }}>+</button>
                       </div>
                     </div>
-                    <div className="text-3xl font-black text-white/15">–</div>
+                    <div className="text-3xl font-black text-white/40">–</div>
                     <div className="text-center">
                       <div className="relative w-16 h-11 mx-auto mb-2 rounded-xl overflow-hidden">
                         <Image src={flagUrl(match.awayFlag)} alt={match.awayTeam} fill className="object-cover" unoptimized />
@@ -356,7 +358,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-semibold text-white/30 uppercase tracking-wide">Độ tự tin</label>
-                  <span className="text-[10px] text-white/25">
+                  <span className="text-[10px] text-white/50">
                     {confidence <= 2 ? "Đúng: +1xu" : confidence === 3 ? "Đúng: +1xu" : confidence === 4 ? "Đúng: +1.5xu · Sai: -0.5xu" : "Đúng: +2xu · Sai: -1xu"}
                   </span>
                 </div>
@@ -371,7 +373,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-center text-white/25">{confidenceLabels[confidence]}</p>
+                <p className="text-xs text-center text-white/50">{confidenceLabels[confidence]}</p>
               </div>
 
               {error && (
@@ -430,16 +432,15 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
                 { type: "Kèo chấp", base: 10 },
                 { type: "Tài / Xỉu", base: 8 },
                 { type: "Tỉ số chính xác", base: 30, hot: true },
-                { type: "1X2", base: 6, disabled: true },
               ].map(r => (
-                <div key={r.type} className={cn("rounded-xl p-2.5 relative", r.disabled && "opacity-40")}
+                <div key={r.type} className="rounded-xl p-2.5 relative"
                   style={r.hot
                     ? { background: "rgba(255,215,0,0.08)", border: "1px solid rgba(255,215,0,0.2)" }
                     : { background: "rgba(255,255,255,0.03)" }}>
-                  <div className="text-[11px] text-white/50">{r.type}{r.disabled && <span className="text-[9px] ml-1 text-white/25">· Sắp ra mắt</span>}</div>
+                  <div className="text-[11px] text-white/55">{r.type}</div>
                   <div className="flex items-baseline gap-1">
                     <span className="text-lg font-black" style={{ color: r.hot ? "#ffd700" : "#00e676" }}>+{r.base}</span>
-                    <span className="text-[10px] text-white/30">×confidence</span>
+                    <span className="text-[10px] text-white/45">×tự tin</span>
                   </div>
                 </div>
               ))}

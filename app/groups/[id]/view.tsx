@@ -259,7 +259,7 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
                         <span className="text-sm font-bold text-white truncate flex-1">{match.homeTeam}</span>
                         <div className="text-center flex-shrink-0 px-1">
                           <div className="text-[10px] text-white/30 font-bold">VS</div>
-                          <div className="text-[9px] text-white/25">{formatDateTimeParts(match.kickoffAt).time} · {formatDateTimeParts(match.kickoffAt).date}</div>
+                          <div className="text-[9px] text-white/50">{formatDateTimeParts(match.kickoffAt).time} · {formatDateTimeParts(match.kickoffAt).date}</div>
                         </div>
                         <span className="text-sm font-bold text-white truncate flex-1 text-right">{match.awayTeam}</span>
                         <div className="relative w-8 h-5 rounded overflow-hidden flex-shrink-0">
@@ -279,7 +279,7 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
                           </button>
                         </div>
                       ) : !hasKeo ? (
-                        <div className="text-xs text-white/25 text-center py-1">Chưa có kèo — <Link href={`/matches/${match.id}`} className="underline hover:text-white/50">Xem trận</Link></div>
+                        <div className="text-xs text-white/50 text-center py-1">Chưa có kèo — <Link href={`/matches/${match.id}`} className="underline hover:text-white/50">Xem trận</Link></div>
                       ) : (
                         <div className="space-y-2">
                           {/* Bet type toggle nếu có cả 2 loại */}
@@ -388,7 +388,7 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
                       <span className="text-white/40"> {item.action} </span>
                       <span className="font-semibold" style={{ color: activityColors[item.type] ?? "#7c3aed" }}>{item.target}</span>
                     </p>
-                    <div className="text-[10px] text-white/25 mt-0.5">{timeAgo(item.createdAt)}</div>
+                    <div className="text-[10px] text-white/50 mt-0.5">{timeAgo(item.createdAt)}</div>
                   </div>
                 </div>
               ))}
@@ -433,7 +433,7 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
                         color: "#0f1117"
                       }}>{i === 0 ? <Crown size={10}/> : m.rank}</div>
                   ) : (
-                    <span className="text-xs font-bold text-white/25">{m.rank}</span>
+                    <span className="text-xs font-bold text-white/50">{m.rank}</span>
                   )}
                 </div>
                 {/* Avatar + Name */}
@@ -489,7 +489,7 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
                       <span className="text-white/40"> {item.action} </span>
                       <span className="font-semibold" style={{ color: activityColors[item.type] ?? "#7c3aed" }}>{item.target}</span>
                     </p>
-                    <div className="text-[10px] text-white/25 mt-0.5">{timeAgo(item.createdAt)}</div>
+                    <div className="text-[10px] text-white/50 mt-0.5">{timeAgo(item.createdAt)}</div>
                   </div>
                 </div>
               ))}
@@ -571,12 +571,12 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
                       <span className="text-[10px]" style={{ color: "rgba(255,152,0,0.5)" }}>Bỏ</span>
                       <span className="text-[10px] font-bold" style={{ color: m.skipped > 0 ? "#ff9800" : "rgba(255,255,255,0.15)" }}>{m.skipped}</span>
                     </div>
-                    <span className="text-[10px] text-white/20 ml-0.5">{winRate}%</span>
+                    <span className="text-[10px] text-white/45 ml-0.5">{winRate}%</span>
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <div className={cn("text-sm font-black", m.isMe ? "text-[#00e676]" : "text-white/70")}>{m.points}</div>
-                  <div className="text-[10px] text-white/25">#{m.rank}</div>
+                  <div className="text-[10px] text-white/50">#{m.rank}</div>
                 </div>
               </div>
             )
@@ -606,7 +606,7 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
               <p className="text-[10px] text-white/40 uppercase font-bold mb-1.5">Tiêu đề</p>
               <input value={notifyTitle} onChange={e => setNotifyTitle(e.target.value)}
                 placeholder="VD: 🔥 Chuẩn bị đoán trận tối nay!"
-                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none"
+                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/35 outline-none"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
             </div>
 
@@ -615,7 +615,7 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
               <textarea value={notifyBody} onChange={e => setNotifyBody(e.target.value)}
                 placeholder="Nhắn gì đó với hội..."
                 rows={3}
-                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none resize-none"
+                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/35 outline-none resize-none"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
             </div>
 

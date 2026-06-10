@@ -116,14 +116,14 @@ export function LeaderboardView({ leaderboard }: { leaderboard: Entry[] }) {
                 )}
                 {entry.badges.map((b, j) => <span key={j} className="text-sm">{b}</span>)}
               </div>
-              <div className="text-[11px] text-white/25 truncate">{entry.displayName}</div>
+              <div className="text-[11px] text-white/50 truncate">{entry.displayName}</div>
             </div>
             <div className="text-right flex-shrink-0">
               <div className={cn("text-base font-black", entry.isMe ? "text-[#00e676]" : "text-white")}>{entry.points}</div>
-              <div className="text-[10px] text-white/25">{entry.correct}/{entry.total}</div>
+              <div className="text-[10px] text-white/50">{entry.correct}/{entry.total}</div>
             </div>
             <div className={cn("w-5 flex-shrink-0 flex items-center justify-center",
-              entry.trend > 0 ? "text-[#00e676]" : entry.trend < 0 ? "text-red-400" : "text-white/20")}>
+              entry.trend > 0 ? "text-[#00e676]" : entry.trend < 0 ? "text-red-400" : "text-white/45")}>
               <Minus size={14} />
             </div>
           </div>

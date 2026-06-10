@@ -110,7 +110,7 @@ export function MatchCard({ match }: { match: MatchCardData }) {
               <div className="h-full transition-all" style={{ width: `${c.away}%`, background: match.awayColor ?? "#00bcd4" }} />
             </div>
             {match.predictorsCount !== undefined && (
-              <div className="text-[10px] text-white/20 mt-1 text-center">{match.predictorsCount} người đã đoán</div>
+              <div className="text-[10px] text-white/45 mt-1 text-center">{match.predictorsCount} người đã đoán</div>
             )}
           </div>
         )}
