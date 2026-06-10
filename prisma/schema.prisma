@@ -11,21 +11,33 @@ datasource db {
 model User {
   id           String        @id @default(cuid())
   email        String        @unique
-  passwordHash String
+  passwordHash String        @default("")
   name         String
   displayName  String?
   avatar       String?
   role         String        @default("user")
+  googleId     String?       @unique
   totalPoints  Int           @default(0)
   streak       Int           @default(0)
   createdAt    DateTime      @default(now())
-  activities     Activity[]
-  adminOf        Group[]         @relation("GroupAdmin")
-  memberships    GroupMember[]
-  predictions    Prediction[]
-  badges         UserBadge[]
-  comments       Comment[]
-  notifications  Notification[]
+  activities        Activity[]
+  adminOf           Group[]           @relation("GroupAdmin")
+  memberships       GroupMember[]
+  predictions       Prediction[]
+  badges            UserBadge[]
+  comments          Comment[]
+  notifications     Notification[]
+  pushSubscriptions PushSubscription[]
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Group {

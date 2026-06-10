@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
+import { sendPushToUser } from "@/lib/push"
 
 // ══════════════════════════════════════════════════════════════
 // Cron Job — chạy mỗi 1 phút, tự động chuyển trạng thái trận đấu
@@ -40,6 +41,20 @@ export async function GET(req: NextRequest) {
         },
       })
       results.push(`⚽ ${match.homeTeam} vs ${match.awayTeam} → LIVE`)
+
+      // Gửi push notification cho tất cả user đã đặt kèo trận này
+      const predictors = await prisma.prediction.findMany({
+        where: { matchId: match.id },
+        select: { userId: true },
+      })
+      for (const p of predictors) {
+        await sendPushToUser(
+          p.userId,
+          `⚽ Trận đấu bắt đầu!`,
+          `${match.homeTeam} vs ${match.awayTeam} vừa bắt đầu`,
+          `/matches/${match.id}`,
+        ).catch(() => {})
+      }
     } else {
       results.push(`⚠️ ${match.homeTeam} vs ${match.awayTeam} — thiếu kèo, không thể bắt đầu`)
     }

@@ -3,6 +3,7 @@ import { Bell, Trophy, Users, Calendar, User, Home, History, Shield } from "luci
 import { getCurrentUser } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { NavbarLinks } from "./navbar-links"
+import { PushToggle } from "./pwa-init"
 
 const navItems = [
   { href: "/", label: "Trang chủ", icon: "Home" as const, exact: true },
@@ -39,6 +40,9 @@ export async function Navbar() {
           <NavbarLinks items={navItems} />
 
           <div className="flex items-center gap-2">
+            <div className="hidden md:block">
+              <PushToggle />
+            </div>
             {user.role === "admin" && (
               <Link href="/admin" className="relative p-2 rounded-xl hover:bg-white/5 transition-colors"
                 title="Admin Panel">
