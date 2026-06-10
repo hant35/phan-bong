@@ -42,3 +42,6 @@ yarn-error.log*
 next-env.d.ts
 prisma/dev.db
 prisma/dev.db-journal
+
+# Local SQLite schema (dev only — KHÔNG commit)
+prisma/schema.local.prisma
