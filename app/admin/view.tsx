@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Shield, Zap, Users, Trash2, Save, Check, X, UserMinus, ChevronDown, ChevronUp, Search, HelpCircle, Plus, RefreshCw, Database, CheckSquare, Square, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Shield, Zap, Users, Trash2, Save, Check, X, UserMinus, ChevronDown, ChevronUp, Search, HelpCircle, Plus, RefreshCw, Database, CheckSquare, Square, AlertCircle, CheckCircle2, Bell, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagUrl, formatDateTimeParts } from "@/lib/format"
 
@@ -24,7 +24,7 @@ interface UserData {
   id: string; name: string; avatar: string | null; role: string
 }
 
-type Tab = "matches" | "groups" | "sync"
+type Tab = "matches" | "groups" | "sync" | "notify"
 
 export function AdminView({
   matches, groups, users,
@@ -60,6 +60,39 @@ export function AdminView({
   const [keysLoaded, setKeysLoaded] = useState(false)
   const [keySaving, setKeySaving] = useState<string | null>(null)
   const [keySavedId, setKeySavedId] = useState<string | null>(null)
+
+  // ── Notify state ──
+  const [notifyTarget, setNotifyTarget] = useState<"all" | "group">("all")
+  const [notifyGroupId, setNotifyGroupId] = useState("")
+  const [notifyTitle, setNotifyTitle] = useState("")
+  const [notifyBody, setNotifyBody] = useState("")
+  const [notifyUrl, setNotifyUrl] = useState("")
+  const [notifySending, setNotifySending] = useState(false)
+  const [notifyResult, setNotifyResult] = useState<{ ok: boolean; sent?: number; error?: string } | null>(null)
+
+  async function sendNotify() {
+    if (!notifyTitle.trim() || !notifyBody.trim()) return
+    setNotifySending(true)
+    setNotifyResult(null)
+    try {
+      const res = await fetch("/api/admin/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: notifyTitle, body: notifyBody,
+          url: notifyUrl || undefined,
+          target: notifyTarget,
+          groupId: notifyTarget === "group" ? notifyGroupId : undefined,
+        }),
+      })
+      const data = await res.json()
+      setNotifyResult(res.ok ? { ok: true, sent: data.sent } : { ok: false, error: data.error })
+    } catch {
+      setNotifyResult({ ok: false, error: "Lỗi kết nối" })
+    } finally {
+      setNotifySending(false)
+    }
+  }
 
   // ── Grading result modal ──
   const [gradingResult, setGradingResult] = useState<{
@@ -289,6 +322,7 @@ export function AdminView({
     { id: "matches", label: "Quản lý kèo", icon: <Zap size={15} /> },
     { id: "groups", label: "Quản lý hội", icon: <Users size={15} /> },
     { id: "sync", label: "Đồng bộ dữ liệu", icon: <Database size={15} /> },
+    { id: "notify", label: "Thông báo", icon: <Bell size={15} /> },
   ]
 
   return (
@@ -785,6 +819,107 @@ export function AdminView({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ══════════ NOTIFY TAB ══════════ */}
+      {tab === "notify" && (
+        <div className="space-y-5">
+          <div className="rounded-3xl p-5 space-y-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <Bell size={16} className="text-[#00e676]" />
+              <h2 className="text-base font-bold text-white">Gửi thông báo push</h2>
+            </div>
+
+            {/* Target selector */}
+            <div>
+              <p className="text-xs text-white/40 uppercase font-bold mb-2">Gửi đến</p>
+              <div className="flex gap-2">
+                {[
+                  { id: "all" as const, label: "🌐 Tất cả người dùng" },
+                  { id: "group" as const, label: "👥 Một hội cụ thể" },
+                ].map(o => (
+                  <button key={o.id} onClick={() => { setNotifyTarget(o.id); setNotifyResult(null) }}
+                    className={cn("flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all",
+                      notifyTarget === o.id ? "text-white" : "text-white/40 hover:text-white/60"
+                    )}
+                    style={notifyTarget === o.id
+                      ? { background: "rgba(0,230,118,0.15)", border: "1px solid rgba(0,230,118,0.3)" }
+                      : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }
+                    }>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Group picker */}
+            {notifyTarget === "group" && (
+              <div>
+                <p className="text-xs text-white/40 uppercase font-bold mb-2">Chọn hội</p>
+                <select value={notifyGroupId} onChange={e => setNotifyGroupId(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  <option value="">-- Chọn hội --</option>
+                  {groups.map(g => (
+                    <option key={g.id} value={g.id}>{g.name} ({g.memberCount} thành viên)</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Title */}
+            <div>
+              <p className="text-xs text-white/40 uppercase font-bold mb-2">Tiêu đề</p>
+              <input value={notifyTitle} onChange={e => setNotifyTitle(e.target.value)}
+                placeholder="VD: ⚽ Trận đấu sắp bắt đầu!"
+                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            </div>
+
+            {/* Body */}
+            <div>
+              <p className="text-xs text-white/40 uppercase font-bold mb-2">Nội dung</p>
+              <textarea value={notifyBody} onChange={e => setNotifyBody(e.target.value)}
+                placeholder="Nội dung thông báo..."
+                rows={3}
+                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none resize-none"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            </div>
+
+            {/* URL (optional) */}
+            <div>
+              <p className="text-xs text-white/40 uppercase font-bold mb-2">URL khi bấm vào <span className="normal-case font-normal">(không bắt buộc)</span></p>
+              <input value={notifyUrl} onChange={e => setNotifyUrl(e.target.value)}
+                placeholder="/matches hoặc /groups/..."
+                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            </div>
+
+            {/* Result */}
+            {notifyResult && (
+              <div className={cn("flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold",
+                notifyResult.ok ? "text-[#00e676]" : "text-red-400"
+              )}
+              style={notifyResult.ok
+                ? { background: "rgba(0,230,118,0.08)", border: "1px solid rgba(0,230,118,0.2)" }
+                : { background: "rgba(255,82,82,0.08)", border: "1px solid rgba(255,82,82,0.2)" }}>
+                {notifyResult.ok
+                  ? <><CheckCircle2 size={16}/> Đã gửi tới {notifyResult.sent} thiết bị</>
+                  : <><AlertCircle size={16}/> {notifyResult.error}</>
+                }
+              </div>
+            )}
+
+            {/* Send button */}
+            <button onClick={sendNotify}
+              disabled={notifySending || !notifyTitle.trim() || !notifyBody.trim() || (notifyTarget === "group" && !notifyGroupId)}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-[#0f1117] transition-all hover:scale-[1.02] disabled:opacity-40 disabled:hover:scale-100"
+              style={{ background: "linear-gradient(135deg, #00e676, #00bcd4)" }}>
+              <Send size={15} />
+              {notifySending ? "Đang gửi..." : "Gửi thông báo"}
+            </button>
+          </div>
         </div>
       )}
 
