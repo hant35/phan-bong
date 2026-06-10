@@ -3,7 +3,8 @@
 import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowLeft, Users, Lock, Globe, Crown, Copy, Check, TrendingUp, TrendingDown, Minus, Flame, Activity, Newspaper, Sparkles, Bell, Send, X, CheckCircle2, AlertCircle } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ArrowLeft, Users, Lock, Globe, Crown, Copy, Check, TrendingUp, TrendingDown, Minus, Flame, Activity, Newspaper, Sparkles, Bell, Send, X, CheckCircle2, AlertCircle, Zap, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagUrl, formatDateTimeParts, timeAgo } from "@/lib/format"
 
@@ -25,17 +26,69 @@ const activityColors: Record<string, string> = {
 interface Group { id: string; name: string; visibility: string; inviteCode: string; memberCount: number; myRank: number; myPoints: number; adminId: string }
 interface Member { rank: number; userId: string; name: string; displayName: string; avatar: string; streak: number; points: number; wins: number; losses: number; skipped: number; isMe: boolean; isAdmin: boolean }
 interface Activity { id: string; type: string; action: string; target: string; user: string; avatar: string; createdAt: string }
-interface UpcomingMatch { id: string; homeTeam: string; awayTeam: string; homeFlag: string; awayFlag: string; kickoffAt: string; hasPick: boolean }
+interface UpcomingMatch {
+  id: string; homeTeam: string; awayTeam: string; homeFlag: string; awayFlag: string
+  kickoffAt: string; ahLine: number | null; ouLine: number | null; hasPick: boolean
+  myPick: { betType: string; side: string | null; homeScore: number | null; awayScore: number | null } | null
+}
 
 export function GroupDetailView({ group, members, activities, upcomingMatches, stats, champion }: {
   group: Group; members: Member[]; activities: Activity[]; upcomingMatches: UpcomingMatch[];
   stats: { totalPicks: number; winRate: number; activityPerDay: number };
   champion: { name: string; displayName: string; avatar: string; points: number; correct: number; total: number; streak: number } | null;
 }) {
+  const router = useRouter()
   const [tab, setTab] = useState<"overview" | "leaderboard" | "activity" | "matches" | "members">("overview")
   const [copied, setCopied] = useState(false)
 
   const isGroupAdmin = members.find(m => m.isMe)?.isAdmin ?? false
+
+  // ── Inline pick state ──
+  const [pickState, setPickState] = useState<Record<string, {
+    betType: string; side: string | null; submitting: boolean; done: boolean; error: string | null
+  }>>({})
+
+  function getPickState(matchId: string, match: UpcomingMatch) {
+    return pickState[matchId] ?? {
+      betType: match.ahLine != null ? "ah" : "ou",
+      side: match.myPick?.side ?? null,
+      submitting: false,
+      done: match.hasPick,
+      error: null,
+    }
+  }
+
+  function setPick(matchId: string, field: string, value: string | boolean | null) {
+    setPickState(prev => ({
+      ...prev,
+      [matchId]: { ...getPickState(matchId, upcomingMatches.find(m => m.id === matchId)!), [field]: value },
+    }))
+  }
+
+  async function submitPick(match: UpcomingMatch) {
+    const ps = getPickState(match.id, match)
+    if (!ps.side) return
+    setPick(match.id, "submitting", true)
+    setPick(match.id, "error", null)
+    try {
+      const res = await fetch("/api/predictions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matchId: match.id, betType: ps.betType, side: ps.side, confidence: 3 }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setPick(match.id, "error", data.error ?? "Có lỗi")
+        setPick(match.id, "submitting", false)
+        return
+      }
+      setPickState(prev => ({ ...prev, [match.id]: { ...ps, done: true, submitting: false, error: null } }))
+      router.refresh()
+    } catch {
+      setPick(match.id, "error", "Lỗi mạng")
+      setPick(match.id, "submitting", false)
+    }
+  }
 
   // ── Notify state (dành cho group admin) ──
   const [showNotify, setShowNotify] = useState(false)
@@ -177,6 +230,144 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
               </div>
             ))}
           </div>
+
+          {/* Trận sắp tới – đoán inline */}
+          {upcomingMatches.length > 0 && (
+            <div className="rounded-3xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                <div className="flex items-center gap-2">
+                  <Zap size={14} className="text-[#00e676]" />
+                  <h3 className="font-bold text-white text-sm">Trận sắp tới</h3>
+                </div>
+                <Link href="/matches" className="text-[10px] text-white/30 hover:text-white/60">Xem tất cả →</Link>
+              </div>
+              <div className="divide-y divide-white/5">
+                {upcomingMatches.map(match => {
+                  const ps = getPickState(match.id, match)
+                  const hasKeo = match.ahLine != null || match.ouLine != null
+                  const sideLabel = ps.side === "home" ? match.homeTeam
+                    : ps.side === "away" ? match.awayTeam
+                    : ps.side === "over" ? "Tài" : ps.side === "under" ? "Xỉu" : null
+                  return (
+                    <div key={match.id} className="px-4 py-4 space-y-3">
+                      {/* Match header */}
+                      <div className="flex items-center gap-2">
+                        <div className="relative w-8 h-5 rounded overflow-hidden flex-shrink-0">
+                          <Image src={flagUrl(match.homeFlag)} alt="" fill className="object-cover" unoptimized />
+                        </div>
+                        <span className="text-sm font-bold text-white truncate flex-1">{match.homeTeam}</span>
+                        <div className="text-center flex-shrink-0 px-1">
+                          <div className="text-[10px] text-white/30 font-bold">VS</div>
+                          <div className="text-[9px] text-white/25">{formatDateTimeParts(match.kickoffAt).time} · {formatDateTimeParts(match.kickoffAt).date}</div>
+                        </div>
+                        <span className="text-sm font-bold text-white truncate flex-1 text-right">{match.awayTeam}</span>
+                        <div className="relative w-8 h-5 rounded overflow-hidden flex-shrink-0">
+                          <Image src={flagUrl(match.awayFlag)} alt="" fill className="object-cover" unoptimized />
+                        </div>
+                      </div>
+
+                      {/* Pick area */}
+                      {ps.done ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm font-bold" style={{ color: "#00e676" }}>
+                            <CheckCircle2 size={15} /> Đã đoán: {sideLabel ?? (ps.betType === "exact" ? "Tỉ số" : "—")}
+                          </div>
+                          <button onClick={() => setPickState(prev => ({ ...prev, [match.id]: { ...ps, done: false } }))}
+                            className="text-xs text-white/30 hover:text-white/60 transition-colors underline">
+                            Sửa
+                          </button>
+                        </div>
+                      ) : !hasKeo ? (
+                        <div className="text-xs text-white/25 text-center py-1">Chưa có kèo — <Link href={`/matches/${match.id}`} className="underline hover:text-white/50">Xem trận</Link></div>
+                      ) : (
+                        <div className="space-y-2">
+                          {/* Bet type toggle nếu có cả 2 loại */}
+                          {match.ahLine != null && match.ouLine != null && (
+                            <div className="flex gap-1.5">
+                              {[{ id: "ah", label: "Kèo chấp" }, { id: "ou", label: "Tài/Xỉu" }].map(bt => (
+                                <button key={bt.id} onClick={() => setPick(match.id, "betType", bt.id)}
+                                  className={cn("flex-1 py-1 rounded-lg text-[10px] font-bold transition-all",
+                                    ps.betType === bt.id ? "text-[#0f1117]" : "text-white/40")}
+                                  style={ps.betType === bt.id
+                                    ? { background: "linear-gradient(135deg,#00e676,#00bcd4)" }
+                                    : { background: "rgba(255,255,255,0.05)" }}>
+                                  {bt.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Side buttons */}
+                          {ps.betType === "ah" && match.ahLine != null && (
+                            <div className="flex gap-2">
+                              {[
+                                { id: "home", label: match.homeTeam, sub: `chấp ${match.ahLine > 0 ? "+" : ""}${match.ahLine}`, flag: match.homeFlag },
+                                { id: "away", label: match.awayTeam, sub: "nhận chấp", flag: match.awayFlag },
+                              ].map(opt => (
+                                <button key={opt.id} onClick={() => setPick(match.id, "side", opt.id)}
+                                  className={cn("flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all")}
+                                  style={ps.side === opt.id
+                                    ? { background: "rgba(0,230,118,0.1)", borderColor: "rgba(0,230,118,0.35)" }
+                                    : { background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.06)" }}>
+                                  <div className="relative w-7 h-5 rounded overflow-hidden flex-shrink-0">
+                                    <Image src={flagUrl(opt.flag)} alt="" fill className="object-cover" unoptimized />
+                                  </div>
+                                  <div className="text-left min-w-0">
+                                    <div className={cn("text-xs font-bold truncate", ps.side === opt.id ? "text-[#00e676]" : "text-white/70")}>{opt.label}</div>
+                                    <div className="text-[9px] text-white/30">{opt.sub}</div>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {ps.betType === "ou" && match.ouLine != null && (
+                            <div className="flex gap-2">
+                              {[
+                                { id: "over", label: "Tài", sub: `> ${match.ouLine} bàn`, color: "#00e676" },
+                                { id: "under", label: "Xỉu", sub: `≤ ${match.ouLine} bàn`, color: "#ff5252" },
+                              ].map(opt => (
+                                <button key={opt.id} onClick={() => setPick(match.id, "side", opt.id)}
+                                  className="flex-1 py-2.5 rounded-xl border text-center transition-all"
+                                  style={ps.side === opt.id
+                                    ? { background: `${opt.color}15`, borderColor: `${opt.color}40` }
+                                    : { background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.06)" }}>
+                                  <div className={cn("text-sm font-black", ps.side === opt.id ? "" : "text-white/60")}
+                                    style={ps.side === opt.id ? { color: opt.color } : {}}>{opt.label}</div>
+                                  <div className="text-[9px] text-white/30">{opt.sub}</div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {ps.error && (
+                            <p className="text-xs text-red-400 px-1">{ps.error}</p>
+                          )}
+
+                          <div className="flex gap-2">
+                            <button onClick={() => submitPick(match)}
+                              disabled={ps.submitting || !ps.side}
+                              className="flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all disabled:opacity-40"
+                              style={ps.side
+                                ? { background: "linear-gradient(135deg,#00e676,#00bcd4)", color: "#0f1117" }
+                                : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)" }}>
+                              {ps.submitting ? <Loader2 size={13} className="animate-spin"/> : <Zap size={13}/>}
+                              Xác nhận
+                            </button>
+                            <Link href={`/matches/${match.id}?from=/groups/${group.id}`}
+                              className="px-3 py-2 rounded-xl text-[10px] font-semibold text-white/40 hover:text-white/70 transition-colors flex items-center"
+                              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                              Chi tiết
+                            </Link>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="rounded-3xl p-5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <div className="flex items-center gap-2 mb-4">

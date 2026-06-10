@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, Lock, BarChart3, Users, Zap, Cloud, MapPin, Trophy, Flame, Info, Loader2 } from "lucide-react"
 import { LivePanel } from "@/components/live-panel"
 import { MatchChatBar } from "@/components/match-chat"
@@ -36,6 +36,9 @@ interface Match {
 
 export function MatchDetailView({ match, currentUserId, commentCount, isInGroup }: { match: Match; currentUserId: string; commentCount: number; isInGroup: boolean }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const backUrl = searchParams.get("from") ?? "/matches"
+  const backLabel = backUrl.startsWith("/groups/") ? "← Hội" : "← Lịch trận"
   const [tab, setTab] = useState<"pick" | "info" | "group">("pick")
   const [betType, setBetType] = useState(match.myPick?.betType ?? "ah")
   const [pick, setPick] = useState<string | null>(match.myPick?.side ?? null)
@@ -70,8 +73,8 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
 
   return (
     <div>
-      <Link href="/matches" className="inline-flex items-center gap-1.5 text-sm text-white/30 hover:text-white/60 transition-colors mb-4">
-        <ArrowLeft size={15} /> Lịch trận
+      <Link href={backUrl} className="inline-flex items-center gap-1.5 text-sm text-white/30 hover:text-white/60 transition-colors mb-4">
+        <ArrowLeft size={15} /> {backLabel.replace("← ", "")}
       </Link>
 
       {/* Hero */}

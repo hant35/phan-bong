@@ -34,9 +34,9 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   })
 
   const upcomingMatches = await prisma.match.findMany({
-    where: { status: "scheduled" },
+    where: { status: "scheduled", kickoffAt: { gt: new Date() } },
     orderBy: { kickoffAt: "asc" },
-    take: 3,
+    take: 5,
     include: { predictions: { where: { userId: user.id } } },
   })
 
@@ -64,7 +64,14 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
     upcomingMatches={upcomingMatches.map(m => ({
       id: m.id, homeTeam: m.homeTeam, awayTeam: m.awayTeam,
       homeFlag: m.homeFlag, awayFlag: m.awayFlag, kickoffAt: m.kickoffAt.toISOString(),
+      ahLine: m.ahLine, ouLine: m.ouLine,
       hasPick: m.predictions.length > 0,
+      myPick: m.predictions[0] ? {
+        betType: m.predictions[0].betType,
+        side: m.predictions[0].side,
+        homeScore: m.predictions[0].homeScore,
+        awayScore: m.predictions[0].awayScore,
+      } : null,
     }))}
     stats={{
       totalPicks,

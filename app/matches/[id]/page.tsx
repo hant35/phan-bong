@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation"
+import { Suspense } from "react"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
 import { MatchDetailView } from "./view"
@@ -59,5 +60,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
     } : null,
   }
 
-  return <MatchDetailView match={data} currentUserId={user.id} commentCount={commentCount} isInGroup={isInGroup} />
+  return (
+    <Suspense fallback={null}>
+      <MatchDetailView match={data} currentUserId={user.id} commentCount={commentCount} isInGroup={isInGroup} />
+    </Suspense>
+  )
 }

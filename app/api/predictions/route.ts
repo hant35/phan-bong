@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
+import { sendPushToUser } from "@/lib/push"
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser()
@@ -88,11 +89,53 @@ export async function POST(req: NextRequest) {
   // Rule 4: Confidence 1-5
   const conf = Math.max(1, Math.min(5, Math.round(confidence ?? 3)))
 
+  const isNew = !(await prisma.prediction.findUnique({ where: { userId_matchId: { userId: user.id, matchId } } }))
+
   const pred = await prisma.prediction.upsert({
     where: { userId_matchId: { userId: user.id, matchId } },
     update: { betType, side: betType === "exact" ? null : side, homeScore, awayScore, confidence: conf },
     create: { userId: user.id, matchId, betType, side: betType === "exact" ? null : side, homeScore, awayScore, confidence: conf },
   })
+
+  // Chỉ tạo activity + push khi đoán lần đầu (không khi sửa)
+  if (isNew) {
+    const pickLabel =
+      betType === "exact" ? `${homeScore}–${awayScore}`
+      : betType === "ou" ? (side === "over" ? "Tài" : "Xỉu")
+      : side === "home" ? match.homeTeam : match.awayTeam
+    const matchLabel = `${match.homeTeam} vs ${match.awayTeam}`
+
+    // Lấy tất cả hội của user
+    const myGroups = await prisma.groupMember.findMany({
+      where: { userId: user.id },
+      include: { group: { include: { members: { select: { userId: true } } } } },
+    })
+
+    // Ghi activity + push cho từng hội
+    await Promise.allSettled(myGroups.map(async gm => {
+      // Activity
+      await prisma.activity.create({
+        data: {
+          userId: user.id,
+          groupId: gm.groupId,
+          type: "pick",
+          action: `đã đoán ${pickLabel} cho`,
+          target: matchLabel,
+        },
+      })
+
+      // Push cho các thành viên khác trong hội
+      const others = gm.group.members.filter(m => m.userId !== user.id)
+      await Promise.allSettled(
+        others.map(m => sendPushToUser(
+          m.userId,
+          `🎯 ${user.name} vừa đặt kèo!`,
+          `${pickLabel} cho trận ${matchLabel}`,
+          `/groups/${gm.groupId}`,
+        ))
+      )
+    }))
+  }
 
   return NextResponse.json({ prediction: pred })
 }
