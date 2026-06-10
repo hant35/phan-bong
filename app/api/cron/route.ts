@@ -20,11 +20,12 @@ export async function GET(req: NextRequest) {
   const now = new Date()
   const results: string[] = []
 
-  // ── 1. scheduled → live: trận đã đến giờ kickoff ──
+  // ── 1. scheduled → live: trận đã đến giờ kickoff (trong vòng 4 giờ gần nhất) ──
+  const fourHoursAgo = new Date(now.getTime() - 4 * 60 * 60 * 1000)
   const shouldStart = await prisma.match.findMany({
     where: {
       status: "scheduled",
-      kickoffAt: { lte: now },
+      kickoffAt: { lte: now, gte: fourHoursAgo },
     },
   })
 
