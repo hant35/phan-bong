@@ -28,6 +28,7 @@ model User {
   comments          Comment[]
   notifications     Notification[]
   pushSubscriptions PushSubscription[]
+  groupChats        GroupChat[]
 }
 
 model PushSubscription {
@@ -50,6 +51,7 @@ model Group {
   activities Activity[]
   admin      User          @relation("GroupAdmin", fields: [adminId], references: [id])
   members    GroupMember[]
+  chats      GroupChat[]
 }
 
 model GroupMember {
@@ -173,6 +175,16 @@ model Setting {
   key       String   @id
   value     String
   updatedAt DateTime @default(now()) @updatedAt
+}
+
+model GroupChat {
+  id        String   @id @default(cuid())
+  userId    String
+  groupId   String
+  text      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model Session {

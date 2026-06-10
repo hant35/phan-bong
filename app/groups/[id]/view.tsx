@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, Users, Lock, Globe, Crown, Copy, Check, TrendingUp, TrendingDown, Minus, Flame, Activity, Newspaper, Sparkles, Bell, Send, X, CheckCircle2, AlertCircle, Zap, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagUrl, formatDateTimeParts, timeAgo } from "@/lib/format"
+import { GroupChat } from "@/components/group-chat"
 
 const avatarGradients = [
   "linear-gradient(135deg, #ffd700, #ff8f00)",
@@ -393,6 +394,9 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
               ))}
             </div>
           </div>
+
+          {/* Chat hội */}
+          <GroupChat groupId={group.id} currentUserId={members.find(m => m.isMe)?.userId ?? ""} />
         </div>
       )}
 
