@@ -2,13 +2,16 @@ import webpush from "web-push"
 import { prisma } from "./db"
 
 function initVapid() {
-  if (!process.env.VAPID_EMAIL || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return false
-  webpush.setVapidDetails(
-    process.env.VAPID_EMAIL,
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY,
-  )
-  return true
+  const { VAPID_EMAIL, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY } = process.env
+  if (!VAPID_EMAIL || !NEXT_PUBLIC_VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return false
+  try {
+    webpush.setVapidDetails(VAPID_EMAIL, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
+    return true
+  } catch (err) {
+    // Key sai định dạng (không phải URL-safe Base64) — bỏ qua push thay vì crash
+    console.warn("[push] VAPID keys không hợp lệ, bỏ qua gửi push:", (err as Error).message)
+    return false
+  }
 }
 
 export async function sendPushToUser(userId: string, title: string, body: string, url = "/") {
