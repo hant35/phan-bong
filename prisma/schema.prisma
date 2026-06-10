@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  name         String
+  displayName  String?
+  avatar       String?
+  role         String        @default("user")
+  totalPoints  Int           @default(0)
+  streak       Int           @default(0)
+  createdAt    DateTime      @default(now())
+  activities     Activity[]
+  adminOf        Group[]         @relation("GroupAdmin")
+  memberships    GroupMember[]
+  predictions    Prediction[]
+  badges         UserBadge[]
+  comments       Comment[]
+  notifications  Notification[]
+}
+
+model Group {
+  id         String        @id @default(cuid())
+  name       String
+  visibility String        @default("private")
+  inviteCode String        @unique
+  adminId    String
+  createdAt  DateTime      @default(now())
+  activities Activity[]
+  admin      User          @relation("GroupAdmin", fields: [adminId], references: [id])
+  members    GroupMember[]
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  userId   String
+  groupId  String
+  points   Int      @default(0)
+  wins     Int      @default(0)
+  losses   Int      @default(0)
+  skipped  Int      @default(0)
+  joinedAt DateTime @default(now())
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+}
+
+model Match {
+  id          String       @id @default(cuid())
+  homeTeam    String
+  awayTeam    String
+  homeFlag    String
+  awayFlag    String
+  homeColor   String?
+  awayColor   String?
+  kickoffAt   DateTime
+  stage       String
+  venue       String?
+  status      String       @default("scheduled")
+  scoreHome   Int?
+  scoreAway   Int?
+  minute      Int?
+  ahLine      Float?
+  ouLine      Float?
+  weatherIcon String?
+  weatherTemp Int?
+  weatherCond String?
+  h2hHome     Int?
+  h2hDraw     Int?
+  h2hAway     Int?
+  h2hRecent   String?
+  externalId    String?
+  predictions   Prediction[]
+  comments      Comment[]
+  notifications Notification[]
+}
+
+model Prediction {
+  id         String   @id @default(cuid())
+  userId     String
+  matchId    String
+  betType    String
+  side       String?
+  homeScore  Int?
+  awayScore  Int?
+  confidence Int      @default(3)
+  result     String?
+  points     Int      @default(0)
+  createdAt  DateTime @default(now())
+  match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId])
+}
+
+model Badge {
+  code        String      @id
+  name        String
+  emoji       String
+  description String
+  users       UserBadge[]
+}
+
+model UserBadge {
+  userId    String
+  badgeCode String
+  earnedAt  DateTime @default(now())
+  badge     Badge    @relation(fields: [badgeCode], references: [code], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, badgeCode])
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  userId    String
+  groupId   String?
+  type      String
+  action    String
+  target    String
+  meta      String?
+  createdAt DateTime @default(now())
+  group     Group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  matchId   String
+  text      String
+  createdAt DateTime @default(now())
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "kickoff_soon" | "goal" | "result" | "streak" | "overtaken" | "badge" | "comment"
+  title     String
+  body      String
+  matchId   String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match     Match?   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
