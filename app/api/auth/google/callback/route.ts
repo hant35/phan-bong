@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db"
 import { createSession } from "@/lib/auth"
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL!
+const ADMIN_EMAIL = "nguyenha3535@gmail.com"
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -50,16 +51,16 @@ export async function GET(req: NextRequest) {
       where: { OR: [{ googleId: profile.id }, { email: profile.email }] },
     })
 
+    const isAdmin = profile.email === ADMIN_EMAIL
+
     if (user) {
-      // Cập nhật googleId nếu chưa có
-      if (!user.googleId) {
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: { googleId: profile.id, avatar: user.avatar ?? profile.picture ?? null },
-        })
+      const updates: Record<string, unknown> = {}
+      if (!user.googleId) updates.googleId = profile.id
+      if (isAdmin && user.role !== "admin") updates.role = "admin"
+      if (Object.keys(updates).length > 0) {
+        user = await prisma.user.update({ where: { id: user.id }, data: updates })
       }
     } else {
-      // Tạo tài khoản mới
       const initials = profile.name.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase()
       user = await prisma.user.create({
         data: {
@@ -68,6 +69,7 @@ export async function GET(req: NextRequest) {
           googleId: profile.id,
           avatar: initials,
           passwordHash: "",
+          role: isAdmin ? "admin" : "user",
         },
       })
     }
