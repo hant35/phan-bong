@@ -1,4 +1,4 @@
-const CACHE = "phanbong-v1"
+const CACHE = "phanbong-v2"
 const PRECACHE = ["/", "/matches", "/leaderboard", "/offline"]
 
 self.addEventListener("install", e => {
@@ -20,14 +20,20 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return
   const url = new URL(e.request.url)
+  // Chỉ xử lý http/https cùng origin — bỏ qua chrome-extension, data:, ...
+  if (url.protocol !== "http:" && url.protocol !== "https:") return
+  if (url.origin !== self.location.origin) return
   // Không cache API calls
   if (url.pathname.startsWith("/api/")) return
 
   e.respondWith(
     fetch(e.request)
       .then(res => {
-        const clone = res.clone()
-        caches.open(CACHE).then(c => c.put(e.request, clone))
+        // Chỉ cache response hợp lệ (basic, status 200)
+        if (res.ok && res.type === "basic") {
+          const clone = res.clone()
+          caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => {})
+        }
         return res
       })
       .catch(() => caches.match(e.request).then(cached => cached || caches.match("/offline")))
