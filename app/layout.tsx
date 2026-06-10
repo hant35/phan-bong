@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next"
+import { Suspense } from "react"
 import "./globals.css"
 import { Navbar } from "@/components/navbar"
 import { CronRunner } from "@/components/cron-runner"
 import { PwaInit } from "@/components/pwa-init"
+import { NavigationProgress } from "@/components/navigation-progress"
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -32,6 +34,9 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body>
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <PwaInit />
         <Navbar />
         <CronRunner />
