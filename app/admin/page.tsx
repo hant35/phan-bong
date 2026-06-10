@@ -24,8 +24,12 @@ export default async function AdminPage() {
   })
 
   const users = await prisma.user.findMany({
-    select: { id: true, name: true, avatar: true, role: true },
-    orderBy: { name: "asc" },
+    select: {
+      id: true, name: true, avatar: true, role: true,
+      email: true, googleId: true, totalPoints: true, createdAt: true,
+      _count: { select: { predictions: true, memberships: true } },
+    },
+    orderBy: { createdAt: "desc" },
   })
 
   return <AdminView
@@ -60,6 +64,14 @@ export default async function AdminPage() {
         points: m.points,
       })),
     }))}
-    users={users}
+    users={users.map(u => ({
+      id: u.id, name: u.name, avatar: u.avatar, role: u.role,
+      email: u.email,
+      hasGoogle: !!u.googleId,
+      totalPoints: u.totalPoints,
+      predictionCount: u._count.predictions,
+      groupCount: u._count.memberships,
+      createdAt: u.createdAt.toISOString(),
+    }))}
   />
 }

@@ -26,6 +26,8 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
   const commentCount = await prisma.comment.count({ where: { matchId: id } })
   const myPick = m.predictions.find(p => p.userId === user.id)
+  const groupCount = await prisma.groupMember.count({ where: { userId: user.id } })
+  const isInGroup = groupCount > 0
 
   const data = {
     id: m.id,
@@ -57,5 +59,5 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
     } : null,
   }
 
-  return <MatchDetailView match={data} currentUserId={user.id} commentCount={commentCount} />
+  return <MatchDetailView match={data} currentUserId={user.id} commentCount={commentCount} isInGroup={isInGroup} />
 }

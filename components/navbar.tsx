@@ -22,6 +22,16 @@ export async function Navbar() {
     where: { userId: user.id, read: false },
   })
 
+  const isInGroup = await prisma.groupMember.count({ where: { userId: user.id } }) > 0
+  const unpickedCount = isInGroup ? await prisma.match.count({
+    where: {
+      status: "scheduled",
+      kickoffAt: { gt: new Date() },
+      ahLine: { not: null },
+      predictions: { none: { userId: user.id } },
+    },
+  }) : 0
+
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-white/5"
@@ -37,7 +47,7 @@ export async function Navbar() {
             </span>
           </Link>
 
-          <NavbarLinks items={navItems} />
+          <NavbarLinks items={navItems} badges={{ "/matches": unpickedCount }} />
 
           <div className="flex items-center gap-2">
             <div className="hidden md:block">
@@ -65,7 +75,7 @@ export async function Navbar() {
           </div>
         </div>
       </header>
-      <NavbarLinks items={navItems} mobile />
+      <NavbarLinks items={navItems} mobile badges={{ "/matches": unpickedCount }} />
     </>
   )
 }

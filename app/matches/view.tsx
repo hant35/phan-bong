@@ -24,7 +24,11 @@ export function MatchesView({ matches, myPickedCount, userPoints }: {
       (activeFilter === "Live" && m.status === "live") ||
       (activeFilter === "Đã kết thúc" && m.status === "finished") ||
       (activeFilter === "Chưa đoán" && m.status === "scheduled" && !m.myPick) ||
-      activeFilter === "Hôm nay"
+      (activeFilter === "Hôm nay" && (() => {
+        const d = new Date(m.kickoffAt)
+        const today = new Date()
+        return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
+      })())
     return matchesSearch && matchesFilter
   })
 

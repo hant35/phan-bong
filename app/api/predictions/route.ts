@@ -48,6 +48,12 @@ export async function POST(req: NextRequest) {
   const match = await prisma.match.findUnique({ where: { id: matchId } })
   if (!match) return NextResponse.json({ error: "Trận không tồn tại" }, { status: 404 })
 
+  // Rule 0: Phải vào hội mới được đoán
+  const groupCount = await prisma.groupMember.count({ where: { userId: user.id } })
+  if (groupCount === 0) {
+    return NextResponse.json({ error: "Bạn cần tham gia ít nhất một hội trước khi dự đoán" }, { status: 403 })
+  }
+
   // Rule 1: Chỉ được đoán khi trận chưa bắt đầu
   if (match.status !== "scheduled") return NextResponse.json({ error: "Kèo đã khóa — trận đã bắt đầu hoặc kết thúc" }, { status: 400 })
   if (match.kickoffAt.getTime() <= Date.now()) return NextResponse.json({ error: "Trận đã đến giờ đá, không thể đoán nữa" }, { status: 400 })

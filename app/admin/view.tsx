@@ -22,9 +22,11 @@ interface GroupData {
 
 interface UserData {
   id: string; name: string; avatar: string | null; role: string
+  email: string; hasGoogle: boolean; totalPoints: number
+  predictionCount: number; groupCount: number; createdAt: string
 }
 
-type Tab = "matches" | "groups" | "sync" | "notify"
+type Tab = "matches" | "groups" | "sync" | "notify" | "users"
 
 export function AdminView({
   matches, groups, users,
@@ -46,6 +48,9 @@ export function AdminView({
     ahLine: "", ouLine: "",
   })
   const [addingMatch, setAddingMatch] = useState(false)
+
+  // ── Users tab state ──
+  const [userSearch, setUserSearch] = useState("")
 
   // ── Sync state ──
   const [selectedSources, setSelectedSources] = useState<string[]>([])
@@ -323,6 +328,7 @@ export function AdminView({
     { id: "groups", label: "Quản lý hội", icon: <Users size={15} /> },
     { id: "sync", label: "Đồng bộ dữ liệu", icon: <Database size={15} /> },
     { id: "notify", label: "Thông báo", icon: <Bell size={15} /> },
+    { id: "users", label: "Người dùng", icon: <Users size={15} /> },
   ]
 
   return (
@@ -919,6 +925,94 @@ export function AdminView({
               <Send size={15} />
               {notifySending ? "Đang gửi..." : "Gửi thông báo"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ USERS TAB ══════════ */}
+      {tab === "users" && (
+        <div className="space-y-4">
+          {/* Summary stats */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Tổng users", value: users.length, color: "#00e676" },
+              { label: "Có hội", value: users.filter(u => u.groupCount > 0).length, color: "#00bcd4" },
+              { label: "Đã đoán", value: users.filter(u => u.predictionCount > 0).length, color: "#ffd700" },
+            ].map(s => (
+              <div key={s.label} className="rounded-2xl p-3 text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="text-xl font-black" style={{ color: s.color }}>{s.value}</div>
+                <div className="text-[10px] text-white/30 mt-0.5">{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+            <input value={userSearch} onChange={e => setUserSearch(e.target.value)}
+              placeholder="Tìm tên hoặc email..."
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }} />
+          </div>
+
+          {/* User list */}
+          <div className="space-y-2">
+            {users
+              .filter(u => {
+                if (!userSearch) return true
+                const s = userSearch.toLowerCase()
+                return u.name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s)
+              })
+              .map((u, i) => {
+                const avatarColors = [
+                  "linear-gradient(135deg,#00e676,#00bcd4)",
+                  "linear-gradient(135deg,#7c3aed,#ec4899)",
+                  "linear-gradient(135deg,#ffd700,#ff8f00)",
+                  "linear-gradient(135deg,#0288d1,#26c6da)",
+                  "linear-gradient(135deg,#ff5252,#ff1744)",
+                ]
+                return (
+                  <div key={u.id} className="rounded-2xl p-4 flex items-center gap-3"
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0"
+                      style={{ background: avatarColors[i % avatarColors.length], color: "white" }}>
+                      {u.avatar ?? u.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-sm text-white truncate">{u.name}</span>
+                        {u.role === "admin" && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0"
+                            style={{ background: "rgba(255,82,82,0.15)", color: "#ff5252" }}>Admin</span>
+                        )}
+                        {u.hasGoogle && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0"
+                            style={{ background: "rgba(66,133,244,0.15)", color: "#4285f4" }}>Google</span>
+                        )}
+                        {u.groupCount === 0 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0"
+                            style={{ background: "rgba(255,152,0,0.15)", color: "#ff9800" }}>Chưa có hội</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-white/30 truncate mt-0.5">{u.email}</div>
+                    </div>
+                    <div className="text-right flex-shrink-0 space-y-0.5">
+                      <div className="flex items-center gap-2 justify-end">
+                        <span className="text-[10px] text-white/30">Đoán</span>
+                        <span className="text-xs font-bold text-white/60">{u.predictionCount}</span>
+                      </div>
+                      <div className="flex items-center gap-2 justify-end">
+                        <span className="text-[10px] text-white/30">Hội</span>
+                        <span className="text-xs font-bold text-white/60">{u.groupCount}</span>
+                      </div>
+                      <div className="flex items-center gap-2 justify-end">
+                        <span className="text-[10px]" style={{ color: "#ffd700" }}>⬡</span>
+                        <span className="text-xs font-bold" style={{ color: "#ffd700" }}>{u.totalPoints}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
           </div>
         </div>
       )}

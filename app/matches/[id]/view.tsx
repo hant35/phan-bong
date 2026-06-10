@@ -34,7 +34,7 @@ interface Match {
   myPick?: { betType: string; side?: string | null; homeScore?: number | null; awayScore?: number | null; confidence: number; result?: string | null; points: number } | null
 }
 
-export function MatchDetailView({ match, currentUserId, commentCount }: { match: Match; currentUserId: string; commentCount: number }) {
+export function MatchDetailView({ match, currentUserId, commentCount, isInGroup }: { match: Match; currentUserId: string; commentCount: number; isInGroup: boolean }) {
   const router = useRouter()
   const [tab, setTab] = useState<"pick" | "info" | "group">("pick")
   const [betType, setBetType] = useState(match.myPick?.betType ?? "ah")
@@ -186,7 +186,20 @@ export function MatchDetailView({ match, currentUserId, commentCount }: { match:
       {/* Pick */}
       {tab === "pick" && (
         <div className="space-y-4">
-          {isLocked ? (
+          {!isInGroup && !isLocked ? (
+            <div className="glass rounded-2xl p-6 text-center space-y-4">
+              <div className="text-4xl">🏟️</div>
+              <div>
+                <p className="font-black text-white text-lg">Vào hội để dự đoán</p>
+                <p className="text-sm text-white/40 mt-1">Bạn cần tham gia ít nhất một hội mới có thể đặt kèo và ganh đua với bạn bè.</p>
+              </div>
+              <Link href="/groups"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-[#0f1117] transition-all hover:scale-105"
+                style={{ background: "linear-gradient(135deg, #00e676, #00bcd4)" }}>
+                <Users size={15} /> Tìm hội hoặc tạo hội mới
+              </Link>
+            </div>
+          ) : isLocked ? (
             <div className="glass rounded-2xl p-6 text-center">
               <Lock size={28} className="mx-auto mb-3 text-white/20" />
               <p className="font-bold text-white/50">Kèo đã khóa</p>
@@ -237,6 +250,18 @@ export function MatchDetailView({ match, currentUserId, commentCount }: { match:
                 ))}
               </div>
 
+              {betType === "ah" && match.ahLine != null && (
+                <div className="px-3 py-2.5 rounded-xl text-xs text-white/50 leading-relaxed"
+                  style={{ background: "rgba(0,230,118,0.05)", border: "1px solid rgba(0,230,118,0.1)" }}>
+                  <span className="text-[#00e676] font-bold">⚖️ Kèo chấp {match.ahLine > 0 ? `+${match.ahLine}` : match.ahLine}:</span>{" "}
+                  {match.ahLine < 0
+                    ? `${match.homeTeam} chấp ${Math.abs(match.ahLine)} trái. Chọn Nhà thắng nếu nhà thắng cách biệt hơn ${Math.abs(match.ahLine)} bàn. Chọn Khách thắng nếu khách thắng, hòa, hoặc thua dưới ${Math.abs(match.ahLine)} bàn.`
+                    : match.ahLine > 0
+                    ? `${match.awayTeam} chấp ${match.ahLine} trái. Chọn Khách thắng nếu khách thắng cách biệt hơn ${match.ahLine} bàn. Ngược lại chọn Nhà.`
+                    : "Kèo đồng banh. Ai thắng trận người đó thắng kèo. Hòa thì hoàn lại."}
+                </div>
+              )}
+
               {betType === "ah" && (
                 <div className="grid gap-2 grid-cols-2">
                   {[
@@ -257,6 +282,14 @@ export function MatchDetailView({ match, currentUserId, commentCount }: { match:
                       <div className="text-xs text-white/30 mt-0.5">{opt.sub}</div>
                     </button>
                   ))}
+                </div>
+              )}
+
+              {betType === "ou" && match.ouLine != null && (
+                <div className="px-3 py-2.5 rounded-xl text-xs text-white/50 leading-relaxed"
+                  style={{ background: "rgba(0,188,212,0.05)", border: "1px solid rgba(0,188,212,0.1)" }}>
+                  <span className="text-[#00bcd4] font-bold">📊 Tài/Xỉu {match.ouLine}:</span>{" "}
+                  Chọn <strong className="text-white/70">Tài</strong> nếu tổng số bàn thắng cả hai đội nhiều hơn {match.ouLine}. Chọn <strong className="text-white/70">Xỉu</strong> nếu ít hơn hoặc bằng {match.ouLine} bàn.
                 </div>
               )}
 
@@ -318,7 +351,12 @@ export function MatchDetailView({ match, currentUserId, commentCount }: { match:
               )}
 
               <div>
-                <label className="text-xs font-semibold text-white/30 uppercase tracking-wide mb-2 block">Độ tự tin</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-semibold text-white/30 uppercase tracking-wide">Độ tự tin</label>
+                  <span className="text-[10px] text-white/25">
+                    {confidence <= 2 ? "Đúng: +1xu" : confidence === 3 ? "Đúng: +1xu" : confidence === 4 ? "Đúng: +1.5xu · Sai: -0.5xu" : "Đúng: +2xu · Sai: -1xu"}
+                  </span>
+                </div>
                 <div className="flex gap-2 mb-2">
                   {[1, 2, 3, 4, 5].map(c => (
                     <button key={c} onClick={() => setConfidence(c)}
