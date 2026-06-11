@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Search } from "lucide-react"
 import { MatchCard, MatchCardData } from "@/components/match-card"
 import { cn } from "@/lib/utils"
+import { formatDayGroupLabel, getDayKey } from "@/lib/format"
 
 const filters = ["Tất cả", "Hôm nay", "Chưa đoán", "Live", "Đã kết thúc"]
 
@@ -36,6 +37,17 @@ export function MatchesView({ matches, myPickedCount, userPoints }: {
   const winRate = matches.filter(m => m.myPick?.result === "win").length
   const total = matches.filter(m => m.myPick?.result).length
   const winPct = total > 0 ? Math.round(winRate / total * 100) : 0
+
+  const groupedByDay = useMemo(() => {
+    const map = new Map<string, MatchCardData[]>()
+    for (const m of filtered) {
+      const key = getDayKey(m.kickoffAt)
+      const list = map.get(key) ?? []
+      list.push(m)
+      map.set(key, list)
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
+  }, [filtered])
 
   return (
     <div>
@@ -114,16 +126,30 @@ export function MatchesView({ matches, myPickedCount, userPoints }: {
         ))}
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-5">
         {filtered.length === 0 ? (
           <div className="text-center py-16 text-white/45">
             <div className="text-5xl mb-3">🔍</div>
             <p className="font-medium">Không tìm thấy trận nào</p>
           </div>
-        ) : filtered.map((match, i) => (
-          <div key={match.id} className="fade-in" style={{ animationDelay: `${i * 60}ms` }}>
-            <MatchCard match={match} />
-          </div>
+        ) : groupedByDay.map(([dayKey, dayMatches]) => (
+          <section key={dayKey}>
+            <div className="flex items-center gap-2 mb-2 px-0.5 sticky top-0 z-10 py-1"
+              style={{ background: "linear-gradient(to bottom, #0f1117 70%, transparent)" }}>
+              <h2 className="text-sm font-black text-white">{formatDayGroupLabel(dayMatches[0].kickoffAt)}</h2>
+              <span className="text-[10px] font-semibold text-white/30 px-1.5 py-px rounded-full"
+                style={{ background: "rgba(255,255,255,0.06)" }}>
+                {dayMatches.length} trận
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              {dayMatches.map((match, i) => (
+                <div key={match.id} className="fade-in" style={{ animationDelay: `${i * 30}ms` }}>
+                  <MatchCard match={match} compact />
+                </div>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
     </div>

@@ -20,10 +20,37 @@ export function formatDate(date: Date | string) {
 
 const WEEKDAYS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]
 
-export function formatDateTimeParts(date: Date | string): { time: string; date: string } {
+function toHcmDate(date: Date | string): Date {
   const d = typeof date === "string" ? new Date(date) : date
-  // Build hours/minutes manually to avoid locale differences between server and client
-  const hcm = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }))
+  return new Date(d.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }))
+}
+
+export function getDayKey(date: Date | string): string {
+  const hcm = toHcmDate(date)
+  const mm = (hcm.getMonth() + 1).toString().padStart(2, "0")
+  const dd = hcm.getDate().toString().padStart(2, "0")
+  return `${hcm.getFullYear()}-${mm}-${dd}`
+}
+
+export function formatDayGroupLabel(date: Date | string): string {
+  const hcm = toHcmDate(date)
+  const key = getDayKey(hcm)
+  const todayKey = getDayKey(new Date())
+  const tomorrow = toHcmDate(new Date())
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const yesterday = toHcmDate(new Date())
+  yesterday.setDate(yesterday.getDate() - 1)
+
+  if (key === todayKey) return "Hôm nay"
+  if (key === getDayKey(tomorrow)) return "Ngày mai"
+  if (key === getDayKey(yesterday)) return "Hôm qua"
+
+  const weekdays = ["Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"]
+  return `${weekdays[hcm.getDay()]}, ${hcm.getDate()} tháng ${hcm.getMonth() + 1}`
+}
+
+export function formatDateTimeParts(date: Date | string): { time: string; date: string } {
+  const hcm = toHcmDate(date)
   const h = hcm.getHours()
   const m = hcm.getMinutes()
   const ampm = h >= 12 ? "PM" : "AM"

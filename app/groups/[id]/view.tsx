@@ -8,6 +8,7 @@ import { ArrowLeft, Users, Lock, Globe, Crown, Copy, Check, TrendingUp, Trending
 import { cn } from "@/lib/utils"
 import { flagUrl, formatDateTimeParts, timeAgo } from "@/lib/format"
 import { GroupChat } from "@/components/group-chat"
+import { HopeStarPicker } from "@/components/hope-star-picker"
 
 const avatarGradients = [
   "linear-gradient(135deg, #ffd700, #ff8f00)",
@@ -41,7 +42,7 @@ interface UpcomingMatch {
   isLive: boolean; scoreHome: number | null; scoreAway: number | null; minute: number | null
   hasConfig: boolean
   predStats: { homeCount: number; awayCount: number; overCount: number; underCount: number }
-  myPick: { betType: string; side: string | null; homeScore: number | null; awayScore: number | null } | null
+  myPick: { betType: string; side: string | null; homeScore: number | null; awayScore: number | null; confidence: number } | null
 }
 
 export function GroupDetailView({ group, currentUserId, myRole, members, activities, upcomingMatches, stats, champion }: {
@@ -57,7 +58,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
 
   // ── Inline pick state ──
   const [pickState, setPickState] = useState<Record<string, {
-    betType: string; side: string | null; submitting: boolean; done: boolean; error: string | null
+    betType: string; side: string | null; confidence: number; submitting: boolean; done: boolean; error: string | null
   }>>({})
 
   function getPickState(matchId: string, match: UpcomingMatch) {
@@ -67,13 +68,14 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
     return pickState[matchId] ?? {
       betType: match.myPick?.betType ?? defaultBetType,
       side: match.myPick?.side ?? null,
+      confidence: match.myPick?.confidence ?? 1,
       submitting: false,
       done: match.hasPick,
       error: null,
     }
   }
 
-  function setPick(matchId: string, field: string, value: string | boolean | null) {
+  function setPick(matchId: string, field: string, value: string | boolean | number | null) {
     setPickState(prev => ({
       ...prev,
       [matchId]: { ...getPickState(matchId, upcomingMatches.find(m => m.id === matchId)!), [field]: value },
@@ -89,7 +91,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
       const res = await fetch("/api/predictions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matchId: match.id, groupId: group.id, betType: ps.betType, side: ps.side, confidence: 3 }),
+        body: JSON.stringify({ matchId: match.id, groupId: group.id, betType: ps.betType, side: ps.side, confidence: ps.confidence }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -494,6 +496,12 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                           )}
 
                           {ps.error && <p className="text-xs text-red-400 px-1">{ps.error}</p>}
+
+                          <HopeStarPicker
+                            compact
+                            value={ps.confidence}
+                            onChange={star => setPick(match.id, "confidence", star)}
+                          />
 
                           <div className="flex gap-2">
                             <button onClick={() => submitPick(match)}

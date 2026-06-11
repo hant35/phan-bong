@@ -142,6 +142,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
           side: m.predictions[0].side,
           homeScore: m.predictions[0].homeScore,
           awayScore: m.predictions[0].awayScore,
+          confidence: m.predictions[0].confidence,
         } : null,
         predStats: { homeCount, awayCount, overCount, underCount },
       }

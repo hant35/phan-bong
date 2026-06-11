@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { prisma } from "@/lib/db"
 import { createSession } from "@/lib/auth"
+import { INITIAL_USER_POINTS } from "@/lib/hope-star"
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL!
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "nguyenha3535@gmail.com"
@@ -70,6 +71,7 @@ export async function GET(req: NextRequest) {
           avatar: initials,
           passwordHash: "",
           role: isAdmin ? "admin" : "user",
+          totalPoints: INITIAL_USER_POINTS,
         },
       })
     }

@@ -8,7 +8,9 @@ import { ArrowLeft, Lock, BarChart3, Users, Zap, Cloud, MapPin, Trophy, Flame, I
 import { LivePanel } from "@/components/live-panel"
 import { MatchChatBar } from "@/components/match-chat"
 import { useToast } from "@/components/toast"
+import { HopeStarPicker } from "@/components/hope-star-picker"
 import { cn } from "@/lib/utils"
+import { hopeStarLabel } from "@/lib/hope-star"
 import { flagUrl, formatDateTimeParts } from "@/lib/format"
 
 const BET_TYPES = [
@@ -56,15 +58,13 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup,
   const [pick, setPick] = useState<string | null>(match.myPick?.side ?? null)
   const [homeScore, setHomeScore] = useState(match.myPick?.homeScore ?? 1)
   const [awayScore, setAwayScore] = useState(match.myPick?.awayScore ?? 0)
-  const [confidence, setConfidence] = useState(match.myPick?.confidence ?? 3)
+  const [confidence, setConfidence] = useState(match.myPick?.confidence ?? 1)
   const [submitted, setSubmitted] = useState(!!match.myPick)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const isLocked = match.status !== "scheduled"
   const kickoff = new Date(match.kickoffAt)
-  const confidenceLabels = ["", "Đoán đại 😅", "Hên xui 🤷", "Bình thường ×1.0", "Khá tự tin ×1.5", "Chắc như đinh 🔥×2.0"]
-
   async function submit() {
     if (!selectedGroupId) { setError("Chọn hội muốn đoán trước"); return }
     setSubmitting(true)
@@ -270,7 +270,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup,
                      `Kèo → ${pick === "home" ? match.homeTeam : pick === "away" ? match.awayTeam : "Hòa"}`}
                   </p>
                   <p className="text-xs text-white/45 mt-1">
-                    Còn {Math.max(0, Math.floor((kickoff.getTime() - Date.now()) / 60000))}p nữa có thể sửa
+                    {hopeStarLabel(confidence)} · Còn {Math.max(0, Math.floor((kickoff.getTime() - Date.now()) / 60000))}p có thể sửa
                   </p>
                 </div>
                 <button onClick={() => setSubmitted(false)} className="text-xs text-[#00e676]/60 hover:text-[#00e676] transition-colors underline">
@@ -390,32 +390,13 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup,
                       </div>
                     </div>
                   </div>
-                  <p className="text-center text-xs mt-4" style={{ color: "#00e676" }}>
-                    🎯 Đoán đúng tỉ số chính xác = <strong>30 xu</strong>
+                  <p className="text-center text-xs mt-4 text-white/40">
+                    🎯 Thưởng/phạt xu theo <strong className="text-white/60">Ngôi sao hi vọng</strong> bạn chọn bên dưới
                   </p>
                 </div>
               )}
 
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-semibold text-white/30 uppercase tracking-wide">Độ tự tin</label>
-                  <span className="text-[10px] text-white/50">
-                    {confidence <= 2 ? "Đúng: +1xu" : confidence === 3 ? "Đúng: +1xu" : confidence === 4 ? "Đúng: +1.5xu · Sai: -0.5xu" : "Đúng: +2xu · Sai: -1xu"}
-                  </span>
-                </div>
-                <div className="flex gap-2 mb-2">
-                  {[1, 2, 3, 4, 5].map(c => (
-                    <button key={c} onClick={() => setConfidence(c)}
-                      className="flex-1 py-2 rounded-xl text-sm font-black transition-all"
-                      style={confidence === c
-                        ? { background: "linear-gradient(135deg, #00e676, #00bcd4)", color: "#0f1117" }
-                        : { background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                      {c}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-center text-white/50">{confidenceLabels[confidence]}</p>
-              </div>
+              <HopeStarPicker value={confidence} onChange={setConfidence} />
 
               {error && (
                 <div className="rounded-xl px-3 py-2 text-xs text-red-300" style={{ background: "rgba(255,82,82,0.1)", border: "1px solid rgba(255,82,82,0.2)" }}>
@@ -466,23 +447,24 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup,
           <div className="rounded-2xl p-4" style={{ background: "linear-gradient(135deg, rgba(255,215,0,0.06), rgba(0,230,118,0.03))", border: "1px solid rgba(255,215,0,0.1)" }}>
             <div className="flex items-center gap-2 mb-3">
               <Trophy size={13} style={{ color: "#ffd700" }} />
-              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#ffd700" }}>Phần thưởng nếu đoán đúng</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#ffd700" }}>Ngôi sao hi vọng</span>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
               {[
-                { type: "Kèo chấp", base: 10 },
-                { type: "Tổng bàn thắng", base: 8 },
-                { type: "Tỉ số chính xác", base: 30, hot: true },
+                { star: 1, win: "+1", loss: "0" },
+                { star: 2, win: "+2", loss: "−1" },
+                { star: 3, win: "+3", loss: "−2" },
+                { star: 4, win: "+4", loss: "−4" },
+                { star: 5, win: "+5", loss: "−4" },
               ].map(r => (
-                <div key={r.type} className="rounded-xl p-2.5 relative"
-                  style={r.hot
-                    ? { background: "rgba(255,215,0,0.08)", border: "1px solid rgba(255,215,0,0.2)" }
-                    : { background: "rgba(255,255,255,0.03)" }}>
-                  <div className="text-[11px] text-white/55">{r.type}</div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-lg font-black" style={{ color: r.hot ? "#ffd700" : "#00e676" }}>+{r.base}</span>
-                    <span className="text-[10px] text-white/45">×tự tin</span>
-                  </div>
+                <div key={r.star} className="flex items-center justify-between rounded-xl px-3 py-2"
+                  style={{ background: "rgba(255,255,255,0.03)" }}>
+                  <span className="text-xs font-bold text-white/50">{"⭐".repeat(r.star)}</span>
+                  <span className="text-[11px] text-white/60">
+                    Thắng <strong className="text-[#00e676]">{r.win}</strong>
+                    {" · "}
+                    Thua <strong className={r.loss === "0" ? "text-white/40" : "text-red-400"}>{r.loss}</strong>
+                  </span>
                 </div>
               ))}
             </div>

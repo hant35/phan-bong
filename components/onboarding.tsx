@@ -19,7 +19,7 @@ const STEPS = [
   {
     emoji: "🎯",
     title: "Bước 2: Đặt kèo",
-    desc: 'Vào "Lịch trận" và chọn trận muốn đoán. Có 3 loại kèo: Kèo chấp, Tổng bàn thắng, và Tỉ số chính xác. Điều chỉnh độ tự tin để nhân xu.',
+    desc: 'Vào "Lịch trận" và chọn trận muốn đoán. Có 3 loại kèo: Kèo chấp, Tổng bàn thắng, và Tỉ số chính xác. Điều chỉnh ngôi sao hi vọng để nhân xu.',
     cta: { label: "Xem lịch trận", href: "/matches" },
   },
   {

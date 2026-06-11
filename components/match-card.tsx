@@ -26,7 +26,69 @@ export interface MatchCardData {
   predictorsCount?: number
 }
 
-export function MatchCard({ match }: { match: MatchCardData }) {
+function PickBadge({ match, isUrgent }: { match: MatchCardData; isUrgent: boolean }) {
+  if (match.status === "scheduled") {
+    if (match.myPick) {
+      return (
+        <span className="text-[10px] font-semibold text-[#00e676] flex items-center gap-1">
+          <span className="w-1 h-1 rounded-full bg-[#00e676]" /> Đã đoán
+        </span>
+      )
+    }
+    return (
+      <span className={cn(
+        "text-[10px] font-semibold rounded-full px-1.5 py-px",
+        isUrgent ? "bg-orange-500/20 text-orange-400" : "text-white/35",
+      )}>
+        {isUrgent ? "Đoán ngay" : "Chưa đoán"}
+      </span>
+    )
+  }
+  if (match.status === "live" && match.myPick) {
+    return <span className="text-[10px] text-[#00e676]/70">Theo dõi</span>
+  }
+  if (match.status === "finished" && match.myPick?.result) {
+    const pts = match.myPick.points ?? 0
+    return (
+      <span className={cn(
+        "text-[10px] font-black px-1.5 py-px rounded-full",
+        match.myPick.result === "win" ? "bg-[#00e676]/15 text-[#00e676]" : "bg-red-500/15 text-red-400",
+      )}>
+        {pts > 0 ? `+${pts}` : pts} xu
+      </span>
+    )
+  }
+  return null
+}
+
+function StatusBadge({ match, kickoff, isUrgent, countdown }: {
+  match: MatchCardData
+  kickoff: Date
+  isUrgent: boolean
+  countdown: string
+}) {
+  if (match.status === "live") {
+    return (
+      <span className="flex items-center gap-1 bg-red-500 text-white text-[9px] font-black px-1.5 py-px rounded-full">
+        <span className="live-dot w-1 h-1 bg-white rounded-full inline-block" />
+        LIVE {match.minute}&apos;
+      </span>
+    )
+  }
+  if (match.status === "finished") {
+    return <span className="text-[9px] text-white/30 font-medium">KT</span>
+  }
+  return (
+    <span className={cn(
+      "text-[10px] font-semibold tabular-nums",
+      isUrgent ? "text-orange-400" : "text-white/40",
+    )}>
+      {isUrgent ? `⚡ ${countdown}` : formatDateTimeParts(kickoff).time.split(" ")[0]}
+    </span>
+  )
+}
+
+export function MatchCard({ match, compact = false }: { match: MatchCardData; compact?: boolean }) {
   const kickoff = typeof match.kickoffAt === "string" ? new Date(match.kickoffAt) : match.kickoffAt
   const countdown = formatCountdown(kickoff)
   const isUrgent = match.status === "scheduled" && kickoff.getTime() - Date.now() < 15 * 60 * 1000
@@ -34,6 +96,55 @@ export function MatchCard({ match }: { match: MatchCardData }) {
   const bg = match.status === "live"
     ? `linear-gradient(135deg, ${match.homeColor ?? "#1a1d2e"}22 0%, #1a1d2e 40%, ${match.awayColor ?? "#1a1d2e"}22 100%)`
     : "rgba(26,29,46,0.8)"
+
+  if (compact) {
+    return (
+      <Link href={`/matches/${match.id}`}>
+        <div className={cn(
+          "relative overflow-hidden rounded-xl border transition-all hover:border-white/15 active:scale-[0.99] cursor-pointer",
+          match.status === "live" ? "border-[#00e676]/25" : "border-white/6",
+        )} style={{ background: bg }}>
+          <div className="px-2.5 py-2">
+            <div className="flex items-center gap-2">
+              <div className="relative w-7 h-5 rounded overflow-hidden ring-1 ring-white/10 flex-shrink-0">
+                <Image src={flagUrl(match.homeFlag)} alt={match.homeTeam} fill className="object-cover" unoptimized />
+              </div>
+              <span className="flex-1 min-w-0 text-[11px] font-bold text-white truncate">{match.homeTeam}</span>
+
+              <div className="flex-shrink-0 text-center min-w-[44px]">
+                {match.status !== "scheduled" ? (
+                  <span className="score-font text-sm font-black text-white tabular-nums">
+                    {match.scoreHome}<span className="text-white/25 mx-0.5">-</span>{match.scoreAway}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-white/35 font-bold">vs</span>
+                )}
+              </div>
+
+              <span className="flex-1 min-w-0 text-[11px] font-bold text-white truncate text-right">{match.awayTeam}</span>
+              <div className="relative w-7 h-5 rounded overflow-hidden ring-1 ring-white/10 flex-shrink-0">
+                <Image src={flagUrl(match.awayFlag)} alt={match.awayTeam} fill className="object-cover" unoptimized />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mt-1.5 gap-2">
+              <div className="flex items-center gap-1.5 min-w-0 text-[9px] text-white/30 truncate">
+                <span className="truncate">{match.stage}</span>
+                {match.ahLine != null && (
+                  <span className="flex-shrink-0">· C {match.ahLine > 0 ? `+${match.ahLine}` : match.ahLine}</span>
+                )}
+                {match.ouLine != null && <span className="flex-shrink-0">· {match.ouLine}</span>}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <StatusBadge match={match} kickoff={kickoff} isUrgent={isUrgent} countdown={countdown} />
+                <PickBadge match={match} isUrgent={isUrgent} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Link>
+    )
+  }
 
   const c = match.consensus
 
@@ -124,28 +235,7 @@ export function MatchCard({ match }: { match: MatchCardData }) {
               <span>T/X <strong className="text-white/50">{match.ouLine}</strong></span>
             )}
           </div>
-
-          {match.status === "scheduled" && (
-            match.myPick ? (
-              <div className="flex items-center gap-1 text-[#00e676] text-xs font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#00e676] inline-block" /> Đã đoán
-              </div>
-            ) : (
-              <div className={cn("text-xs font-semibold rounded-full px-2 py-0.5",
-                isUrgent ? "bg-orange-500/20 text-orange-400" : "bg-white/5 text-white/30"
-              )}>
-                {isUrgent ? "Đoán ngay!" : "Chưa đoán"}
-              </div>
-            )
-          )}
-          {match.status === "live" && match.myPick && <div className="text-xs text-[#00e676]/70 font-medium">Đang theo dõi...</div>}
-          {match.status === "finished" && match.myPick?.result && (
-            <div className={cn("text-xs font-black px-2 py-0.5 rounded-full",
-              match.myPick.result === "win" ? "bg-[#00e676]/15 text-[#00e676]" : "bg-red-500/15 text-red-400"
-            )}>
-              {(match.myPick.points ?? 0) > 0 ? `+${match.myPick.points}` : match.myPick.points} xu
-            </div>
-          )}
+          <PickBadge match={match} isUrgent={isUrgent} />
         </div>
       </div>
     </Link>

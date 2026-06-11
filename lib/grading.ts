@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db"
+import { clampPoints, hopeStarDelta } from "@/lib/hope-star"
 
 // ══════════════════════════════════════════════════════════════
 // Grading Engine — chấm điểm khi trận kết thúc
@@ -89,6 +90,50 @@ export function evaluatePrediction(pred: PredictionInput, match: MatchInput): { 
   }
 }
 
+async function applyHopeStarPoints(
+  userId: string,
+  groupId: string,
+  delta: number,
+  result: "win" | "loss",
+): Promise<void> {
+  const [user, member] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { totalPoints: true } }),
+    prisma.groupMember.findUnique({
+      where: { userId_groupId: { userId, groupId } },
+      select: { points: true },
+    }),
+  ])
+  if (!user) return
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      totalPoints: clampPoints(user.totalPoints, delta),
+      streak: result === "win" ? { increment: 1 } : 0,
+    },
+  })
+
+  if (member) {
+    await prisma.groupMember.update({
+      where: { userId_groupId: { userId, groupId } },
+      data: {
+        points: clampPoints(member.points, delta),
+        ...(result === "win" ? { wins: { increment: 1 } } : { losses: { increment: 1 } }),
+      },
+    })
+  } else if (result === "win") {
+    await prisma.groupMember.updateMany({
+      where: { userId, groupId },
+      data: { wins: { increment: 1 } },
+    })
+  } else {
+    await prisma.groupMember.updateMany({
+      where: { userId, groupId },
+      data: { losses: { increment: 1 } },
+    })
+  }
+}
+
 // ── Preview grading (for live matches — temporary) ──
 
 export async function previewGrading(matchId: string): Promise<GradingResult | null> {
@@ -112,6 +157,8 @@ export async function previewGrading(matchId: string): Promise<GradingResult | n
   let wins = 0, losses = 0
 
   for (const pred of predictions) {
+    if (pred.betType === "skip") continue
+
     const cfg = configMap[pred.groupId] ?? {}
     const { result, reason } = evaluatePrediction(
       { betType: pred.betType, side: pred.side, homeScore: pred.homeScore, awayScore: pred.awayScore },
@@ -166,6 +213,8 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
 
   // 1. Grade each prediction — bỏ qua prediction đã có result (idempotent)
   for (const pred of predictions) {
+    if (pred.betType === "skip") continue
+
     if (pred.result !== null) {
       if (pred.result === "win") wins++
       else if (pred.result === "loss") losses++
@@ -183,35 +232,17 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
       },
     )
 
-    const multiplier = cfg.pointsMultiplier ?? 1
-    const earnedPoints = result === "win" ? multiplier : 0
+    const pointsDelta = hopeStarDelta(pred.confidence, result)
 
     await prisma.prediction.update({
       where: { id: pred.id },
-      data: { result, points: earnedPoints },
+      data: { result, points: pointsDelta },
     })
 
-    if (result === "win") {
-      await prisma.user.update({
-        where: { id: pred.userId },
-        data: { totalPoints: { increment: earnedPoints }, streak: { increment: 1 } },
-      })
-      await prisma.groupMember.updateMany({
-        where: { userId: pred.userId, groupId: pred.groupId },
-        data: { wins: { increment: 1 }, points: { increment: earnedPoints } },
-      })
-      wins++
-    } else {
-      await prisma.user.update({
-        where: { id: pred.userId },
-        data: { streak: 0 },
-      })
-      await prisma.groupMember.updateMany({
-        where: { userId: pred.userId, groupId: pred.groupId },
-        data: { losses: { increment: 1 } },
-      })
-      losses++
-    }
+    await applyHopeStarPoints(pred.userId, pred.groupId, pointsDelta, result)
+
+    if (result === "win") wins++
+    else losses++
 
     details.push({ userId: pred.userId, name: pred.user.name, betType: pred.betType, result, reason })
   }
