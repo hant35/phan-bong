@@ -202,8 +202,8 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
               {
                 label: "Đã đoán",
                 value: group.totalConfiguredMatches > 0
-                  ? `${group.myPredicted}/${group.totalConfiguredMatches}`
-                  : group.myPredicted,
+                  ? `${group.myPredicted}/${group.totalConfiguredMatches} trận`
+                  : `${group.myPredicted} trận`,
                 color: "#ec4899",
               },
               { label: "Thành viên", value: group.memberCount, color: "#00bcd4" },
