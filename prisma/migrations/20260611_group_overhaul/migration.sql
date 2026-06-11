@@ -5,7 +5,8 @@ ALTER TABLE "GroupMember" ADD COLUMN IF NOT EXISTS "role" TEXT NOT NULL DEFAULT 
 UPDATE "GroupMember" gm
 SET role = 'owner'
 FROM "Group" g
-WHERE gm."groupId" = g.id AND gm."userId" = g."adminId";
+WHERE gm."groupId" = g.id AND gm."userId" = g."adminId"
+  AND gm.role = 'member';
 
 -- ── 2. GroupMatchConfig ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS "GroupMatchConfig" (
@@ -23,9 +24,16 @@ CREATE TABLE IF NOT EXISTS "GroupMatchConfig" (
     CONSTRAINT "GroupMatchConfig_pkey" PRIMARY KEY ("id")
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "GroupMatchConfig_groupId_matchId_key" ON "GroupMatchConfig"("groupId", "matchId");
-ALTER TABLE "GroupMatchConfig"
-    ADD CONSTRAINT "GroupMatchConfig_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    ADD CONSTRAINT "GroupMatchConfig_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+DO $$ BEGIN
+  ALTER TABLE "GroupMatchConfig" ADD CONSTRAINT "GroupMatchConfig_groupId_fkey"
+    FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  ALTER TABLE "GroupMatchConfig" ADD CONSTRAINT "GroupMatchConfig_matchId_fkey"
+    FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ── 3. GroupSeason ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS "GroupSeason" (
@@ -37,14 +45,15 @@ CREATE TABLE IF NOT EXISTS "GroupSeason" (
     "endedAt"   TIMESTAMP(3),
     CONSTRAINT "GroupSeason_pkey" PRIMARY KEY ("id")
 );
-ALTER TABLE "GroupSeason"
-    ADD CONSTRAINT "GroupSeason_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+DO $$ BEGIN
+  ALTER TABLE "GroupSeason" ADD CONSTRAINT "GroupSeason_groupId_fkey"
+    FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ── 4. Prediction.groupId ────────────────────────────────────────────────────
--- Bước 1: thêm cột nullable
 ALTER TABLE "Prediction" ADD COLUMN IF NOT EXISTS "groupId" TEXT;
 
--- Bước 2: gán groupId = group đầu tiên user tham gia
 UPDATE "Prediction" p
 SET "groupId" = (
     SELECT gm."groupId"
@@ -55,17 +64,15 @@ SET "groupId" = (
 )
 WHERE p."groupId" IS NULL;
 
--- Bước 3: xóa predictions không gán được group (user đã rời hết hội)
 DELETE FROM "Prediction" WHERE "groupId" IS NULL;
 
--- Bước 4: đặt NOT NULL
 ALTER TABLE "Prediction" ALTER COLUMN "groupId" SET NOT NULL;
 
--- Bước 5: xóa unique constraint cũ, tạo mới
 ALTER TABLE "Prediction" DROP CONSTRAINT IF EXISTS "Prediction_userId_matchId_key";
 DROP INDEX IF EXISTS "Prediction_userId_matchId_key";
 CREATE UNIQUE INDEX IF NOT EXISTS "Prediction_userId_matchId_groupId_key" ON "Prediction"("userId", "matchId", "groupId");
 
--- Bước 6: foreign key
-ALTER TABLE "Prediction"
-    ADD CONSTRAINT "Prediction_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "Prediction" ADD CONSTRAINT "Prediction_groupId_fkey"
+    FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
