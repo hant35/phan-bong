@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { sendPushToUser } from "@/lib/push"
 import { gradeMatch } from "@/lib/grading"
+import { syncFootballData } from "@/lib/sync-sources"
 
 // ══════════════════════════════════════════════════════════════
 // Cron Job — chạy mỗi 1 phút, tự động chuyển trạng thái trận đấu
@@ -20,6 +21,25 @@ export async function GET(req: NextRequest) {
 
   const now = new Date()
   const results: string[] = []
+
+  // ── 0. Đồng bộ từ Football-Data.org (API uy tín nhất) ──
+  const fdKey = process.env.FOOTBALL_DATA_API_KEY
+  if (fdKey) {
+    try {
+      const syncResult = await syncFootballData(fdKey)
+      if (syncResult.updated > 0) {
+        results.push(`🔄 Sync Football-Data: ${syncResult.updated} cập nhật`)
+      }
+      if (syncResult.errors.length > 0) {
+        results.push(`⚠️ Sync errors: ${syncResult.errors.join(", ")}`)
+      }
+      for (const d of syncResult.details) {
+        if (d.startsWith("🏆") || d.startsWith("📲")) results.push(d)
+      }
+    } catch (e) {
+      results.push(`❌ Sync failed: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
 
   // ── 1. scheduled → live: trận đã đến giờ kickoff (trong vòng 48 giờ gần nhất) ──
   const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000)
@@ -83,6 +103,22 @@ export async function GET(req: NextRequest) {
       const gr = await gradeMatch(match.id)
       if (gr) {
         results.push(`🏆 Chấm điểm: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
+        // Push notification cho user đã dự đoán
+        const preds = await prisma.prediction.findMany({
+          where: { matchId: match.id, betType: { not: "skip" } },
+          select: { userId: true, result: true },
+        })
+        const userIds = [...new Set(preds.map(p => p.userId))]
+        for (const uid of userIds) {
+          const pred = preds.find(p => p.userId === uid)
+          const emoji = pred?.result === "win" ? "🎉" : "😢"
+          await sendPushToUser(uid,
+            `⚽ ${match.homeTeam} vs ${match.awayTeam} ${match.scoreHome}-${match.scoreAway}`,
+            `${emoji} Đã có kết quả! Bảng xếp hạng hội đã cập nhật.`,
+            `/matches/${match.id}`,
+          ).catch(() => {})
+        }
+        results.push(`📲 Push cho ${userIds.length} người`)
       }
     } catch (e) {
       results.push(`❌ Lỗi chấm điểm: ${e instanceof Error ? e.message : String(e)}`)
@@ -110,6 +146,21 @@ export async function GET(req: NextRequest) {
         const gr = await gradeMatch(match.id)
         if (gr) {
           results.push(`🏆 Chấm điểm: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
+          const preds = await prisma.prediction.findMany({
+            where: { matchId: match.id, betType: { not: "skip" } },
+            select: { userId: true, result: true },
+          })
+          const userIds = [...new Set(preds.map(p => p.userId))]
+          for (const uid of userIds) {
+            const pred = preds.find(p => p.userId === uid)
+            const emoji = pred?.result === "win" ? "🎉" : "😢"
+            await sendPushToUser(uid,
+              `⚽ ${match.homeTeam} vs ${match.awayTeam} ${match.scoreHome}-${match.scoreAway}`,
+              `${emoji} Đã có kết quả! Bảng xếp hạng hội đã cập nhật.`,
+              `/matches/${match.id}`,
+            ).catch(() => {})
+          }
+          results.push(`📲 Push cho ${userIds.length} người`)
         }
       } catch (e) {
         results.push(`❌ Lỗi chấm điểm: ${e instanceof Error ? e.message : String(e)}`)

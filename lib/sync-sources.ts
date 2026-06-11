@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db"
 import { gradeMatch } from "@/lib/grading"
+import { sendPushToUser } from "@/lib/push"
 
 // ══════════════════════════════════════════════════════════════
 // Data source definitions
@@ -70,6 +71,50 @@ export interface SyncResult {
 // ══════════════════════════════════════════════════════════════
 // Matching helper — find local match by team names + date
 // ══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+// Helper: auto-grade + push notification khi trận kết thúc
+// ══════════════════════════════════════════════════════════════
+
+async function gradeAndNotify(
+  matchId: string,
+  homeTeam: string,
+  awayTeam: string,
+  scoreHome: number | null,
+  scoreAway: number | null,
+  result: SyncResult,
+) {
+  try {
+    const gr = await gradeMatch(matchId)
+    if (gr) {
+      result.details.push(`🏆 Đã chấm điểm ${homeTeam} vs ${awayTeam}: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
+
+      // Gửi push cho tất cả user đã dự đoán trận này
+      const scoreText = scoreHome != null && scoreAway != null
+        ? `${scoreHome}–${scoreAway}`
+        : "đã kết thúc"
+      const predictions = await prisma.prediction.findMany({
+        where: { matchId, betType: { not: "skip" } },
+        select: { userId: true, result: true },
+      })
+      const userIds = [...new Set(predictions.map(p => p.userId))]
+
+      for (const userId of userIds) {
+        const pred = predictions.find(p => p.userId === userId)
+        const resultEmoji = pred?.result === "win" ? "🎉" : "😢"
+        await sendPushToUser(
+          userId,
+          `⚽ ${homeTeam} vs ${awayTeam} ${scoreText}`,
+          `${resultEmoji} Đã có kết quả! Bảng xếp hạng hội đã cập nhật.`,
+          `/matches/${matchId}`,
+        ).catch(() => {})
+      }
+      result.details.push(`📲 Đã gửi push cho ${userIds.length} người dự đoán`)
+    }
+  } catch (e) {
+    result.errors.push(`Lỗi chấm điểm ${homeTeam} vs ${awayTeam}: ${e instanceof Error ? e.message : String(e)}`)
+  }
+}
 
 function normalizeTeam(name: string): string {
   // Map common English → Vietnamese team names
@@ -370,16 +415,14 @@ export async function syncFootballData(apiKey: string): Promise<SyncResult> {
         result.updated++
         result.details.push(`${local.homeTeam} vs ${local.awayTeam}: ${Object.keys(updates).join(", ")}`)
 
-        // Auto-grade khi trận chuyển sang finished
+        // Auto-grade + push notification khi trận chuyển sang finished
         if (updates.status === "finished" && local.status !== "finished") {
-          try {
-            const gr = await gradeMatch(local.id)
-            if (gr) {
-              result.details.push(`🏆 Đã chấm điểm ${local.homeTeam} vs ${local.awayTeam}: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
-            }
-          } catch (e) {
-            result.errors.push(`Lỗi chấm điểm ${local.homeTeam} vs ${local.awayTeam}: ${e instanceof Error ? e.message : String(e)}`)
-          }
+          await gradeAndNotify(
+            local.id, local.homeTeam, local.awayTeam,
+            (updates.scoreHome as number | null) ?? local.scoreHome,
+            (updates.scoreAway as number | null) ?? local.scoreAway,
+            result,
+          )
         }
       }
     }
@@ -479,16 +522,14 @@ export async function syncOpenFootball(): Promise<SyncResult> {
         result.updated++
         result.details.push(`${local.homeTeam} vs ${local.awayTeam}: ${Object.keys(updates).join(", ")}`)
 
-        // Auto-grade khi trận chuyển sang finished
+        // Auto-grade + push notification khi trận chuyển sang finished
         if (updates.status === "finished" && local.status !== "finished") {
-          try {
-            const gr = await gradeMatch(local.id)
-            if (gr) {
-              result.details.push(`🏆 Đã chấm điểm ${local.homeTeam} vs ${local.awayTeam}: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
-            }
-          } catch (e) {
-            result.errors.push(`Lỗi chấm điểm ${local.homeTeam} vs ${local.awayTeam}: ${e instanceof Error ? e.message : String(e)}`)
-          }
+          await gradeAndNotify(
+            local.id, local.homeTeam, local.awayTeam,
+            (updates.scoreHome as number | null) ?? local.scoreHome,
+            (updates.scoreAway as number | null) ?? local.scoreAway,
+            result,
+          )
         }
       }
     }
@@ -598,16 +639,14 @@ export async function syncApiFootball(apiKey: string): Promise<SyncResult> {
         result.updated++
         result.details.push(`${local.homeTeam} vs ${local.awayTeam}: ${Object.keys(updates).join(", ")}`)
 
-        // Auto-grade khi trận chuyển sang finished
+        // Auto-grade + push notification khi trận chuyển sang finished
         if (updates.status === "finished" && local.status !== "finished") {
-          try {
-            const gr = await gradeMatch(local.id)
-            if (gr) {
-              result.details.push(`🏆 Đã chấm điểm ${local.homeTeam} vs ${local.awayTeam}: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
-            }
-          } catch (e) {
-            result.errors.push(`Lỗi chấm điểm ${local.homeTeam} vs ${local.awayTeam}: ${e instanceof Error ? e.message : String(e)}`)
-          }
+          await gradeAndNotify(
+            local.id, local.homeTeam, local.awayTeam,
+            (updates.scoreHome as number | null) ?? local.scoreHome,
+            (updates.scoreAway as number | null) ?? local.scoreAway,
+            result,
+          )
         }
       }
     }
