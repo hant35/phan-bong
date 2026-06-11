@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Users, Lock, Globe, Crown, Copy, Check, TrendingUp, TrendingDown, Minus, Flame, Activity, Newspaper, Sparkles, Bell, Send, X, CheckCircle2, AlertCircle, Zap, Loader2 } from "lucide-react"
+import { ArrowLeft, Users, Lock, Globe, Crown, Copy, Check, TrendingUp, TrendingDown, Minus, Flame, Activity, Newspaper, Sparkles, Bell, Send, X, CheckCircle2, AlertCircle, Zap, Loader2, Settings, Shield } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagUrl, formatDateTimeParts, timeAgo } from "@/lib/format"
 import { GroupChat } from "@/components/group-chat"
@@ -25,16 +25,17 @@ const activityColors: Record<string, string> = {
 }
 
 interface Group { id: string; name: string; visibility: string; inviteCode: string; memberCount: number; myRank: number; myPoints: number; adminId: string }
-interface Member { rank: number; userId: string; name: string; displayName: string; avatar: string; streak: number; points: number; wins: number; losses: number; skipped: number; isMe: boolean; isAdmin: boolean }
+interface Member { rank: number; userId: string; name: string; displayName: string; avatar: string; streak: number; points: number; wins: number; losses: number; skipped: number; isMe: boolean; isAdmin: boolean; role: string }
 interface Activity { id: string; type: string; action: string; target: string; user: string; avatar: string; createdAt: string }
 interface UpcomingMatch {
   id: string; homeTeam: string; awayTeam: string; homeFlag: string; awayFlag: string
-  kickoffAt: string; ahLine: number | null; ouLine: number | null; hasPick: boolean
+  kickoffAt: string; ahLine: number | null; ouLine: number | null; allowedBetTypes: string[]
+  pointsMultiplier: number; blindMode: boolean; hasPick: boolean
   myPick: { betType: string; side: string | null; homeScore: number | null; awayScore: number | null } | null
 }
 
-export function GroupDetailView({ group, members, activities, upcomingMatches, stats, champion }: {
-  group: Group; members: Member[]; activities: Activity[]; upcomingMatches: UpcomingMatch[];
+export function GroupDetailView({ group, currentUserId, myRole, members, activities, upcomingMatches, stats, champion }: {
+  group: Group; currentUserId: string; myRole: string; members: Member[]; activities: Activity[]; upcomingMatches: UpcomingMatch[];
   stats: { totalPicks: number; winRate: number; activityPerDay: number };
   champion: { name: string; displayName: string; avatar: string; points: number; correct: number; total: number; streak: number } | null;
 }) {
@@ -42,7 +43,7 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
   const [tab, setTab] = useState<"overview" | "leaderboard" | "activity" | "matches" | "members">("overview")
   const [copied, setCopied] = useState(false)
 
-  const isGroupAdmin = members.find(m => m.isMe)?.isAdmin ?? false
+  const isGroupAdmin = myRole === "owner" || myRole === "admin"
 
   // ── Inline pick state ──
   const [pickState, setPickState] = useState<Record<string, {
@@ -50,8 +51,11 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
   }>>({})
 
   function getPickState(matchId: string, match: UpcomingMatch) {
+    const defaultBetType = match.allowedBetTypes.includes("ah") && match.ahLine != null ? "ah"
+      : match.allowedBetTypes.includes("ou") && match.ouLine != null ? "ou"
+      : match.allowedBetTypes[0] ?? "ah"
     return pickState[matchId] ?? {
-      betType: match.ahLine != null ? "ah" : "ou",
+      betType: match.myPick?.betType ?? defaultBetType,
       side: match.myPick?.side ?? null,
       submitting: false,
       done: match.hasPick,
@@ -75,7 +79,7 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
       const res = await fetch("/api/predictions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matchId: match.id, betType: ps.betType, side: ps.side, confidence: 3 }),
+        body: JSON.stringify({ matchId: match.id, groupId: group.id, betType: ps.betType, side: ps.side, confidence: 3 }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -153,12 +157,21 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
                 <span>Hạng <strong className="text-white/50">{group.myRank}</strong> / {group.memberCount}</span>
               </div>
             </div>
-            <button onClick={copy}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
-              {group.inviteCode}
-              {copied ? <Check size={11} style={{ color: "#00e676" }}/> : <Copy size={11}/>}
-            </button>
+            <div className="flex items-center gap-2">
+              {isGroupAdmin && (
+                <Link href={`/groups/${group.id}/admin`}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
+                  style={{ background: "rgba(0,230,118,0.08)", border: "1px solid rgba(0,230,118,0.15)", color: "#00e676" }}>
+                  <Settings size={11}/> Quản trị
+                </Link>
+              )}
+              <button onClick={copy}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
+                {group.inviteCode}
+                {copied ? <Check size={11} style={{ color: "#00e676" }}/> : <Copy size={11}/>}
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-3 gap-2 mt-3">
             {[
@@ -259,7 +272,21 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
                         <span className="text-sm font-bold text-white truncate flex-1">{match.homeTeam}</span>
                         <div className="text-center flex-shrink-0 px-1">
                           <div className="text-[10px] text-white/30 font-bold">VS</div>
-                          <div className="text-[9px] text-white/50">{formatDateTimeParts(match.kickoffAt).time} · {formatDateTimeParts(match.kickoffAt).date}</div>
+<div className="text-[9px] text-white/25">{formatDateTimeParts(match.kickoffAt).time} · {formatDateTimeParts(match.kickoffAt).date}</div>
+                          <div className="flex items-center justify-center gap-1 mt-0.5">
+                            {match.pointsMultiplier > 1 && (
+                              <span className="text-[8px] font-black px-1 rounded"
+                                style={{ background: "rgba(255,215,0,0.2)", color: "#ffd700" }}>
+                                ×{match.pointsMultiplier}
+                              </span>
+                            )}
+                            {match.blindMode && (
+                              <span className="text-[8px] font-black px-1 rounded"
+                                style={{ background: "rgba(124,58,237,0.2)", color: "#a78bfa" }}>
+                                🙈
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <span className="text-sm font-bold text-white truncate flex-1 text-right">{match.awayTeam}</span>
                         <div className="relative w-8 h-5 rounded overflow-hidden flex-shrink-0">
@@ -282,19 +309,21 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
                         <div className="text-xs text-white/50 text-center py-1">Chưa có kèo — <Link href={`/matches/${match.id}`} className="underline hover:text-white/50">Xem trận</Link></div>
                       ) : (
                         <div className="space-y-2">
-                          {/* Bet type toggle nếu có cả 2 loại */}
-                          {match.ahLine != null && match.ouLine != null && (
+                          {/* Bet type toggle — chỉ hiện các loại được phép */}
+                          {match.allowedBetTypes.filter(t => t !== "exact").length > 1 && (
                             <div className="flex gap-1.5">
-                              {[{ id: "ah", label: "Kèo chấp" }, { id: "ou", label: "Tài/Xỉu" }].map(bt => (
-                                <button key={bt.id} onClick={() => setPick(match.id, "betType", bt.id)}
-                                  className={cn("flex-1 py-1 rounded-lg text-[10px] font-bold transition-all",
-                                    ps.betType === bt.id ? "text-[#0f1117]" : "text-white/40")}
-                                  style={ps.betType === bt.id
-                                    ? { background: "linear-gradient(135deg,#00e676,#00bcd4)" }
-                                    : { background: "rgba(255,255,255,0.05)" }}>
-                                  {bt.label}
-                                </button>
-                              ))}
+                              {[{ id: "ah", label: "Kèo chấp" }, { id: "ou", label: "Tài/Xỉu" }]
+                                .filter(bt => match.allowedBetTypes.includes(bt.id))
+                                .map(bt => (
+                                  <button key={bt.id} onClick={() => setPick(match.id, "betType", bt.id)}
+                                    className={cn("flex-1 py-1 rounded-lg text-[10px] font-bold transition-all",
+                                      ps.betType === bt.id ? "text-[#0f1117]" : "text-white/40")}
+                                    style={ps.betType === bt.id
+                                      ? { background: "linear-gradient(135deg,#00e676,#00bcd4)" }
+                                      : { background: "rgba(255,255,255,0.05)" }}>
+                                    {bt.label}
+                                  </button>
+                                ))}
                             </div>
                           )}
 
@@ -396,7 +425,7 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
           </div>
 
           {/* Chat hội */}
-          <GroupChat groupId={group.id} currentUserId={members.find(m => m.isMe)?.userId ?? ""} />
+          <GroupChat groupId={group.id} currentUserId={currentUserId} />
         </div>
       )}
 
@@ -549,9 +578,10 @@ export function GroupDetailView({ group, members, activities, upcomingMatches, s
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0"
                   style={{ background: avatarGradients[i % avatarGradients.length], color: "white" }}>{m.avatar}</div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className={cn("text-sm font-bold", m.isMe ? "text-[#00e676]" : "text-white/80")}>{m.isMe ? "Bạn" : m.name}</span>
-                    {m.isAdmin && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(255,215,0,0.1)", color: "#ffd700" }}>Admin</span>}
+                    {m.role === "owner" && <span className="flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(255,215,0,0.1)", color: "#ffd700" }}><Crown size={8}/>Chủ hội</span>}
+                    {m.role === "admin" && <span className="flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(0,188,212,0.1)", color: "#00bcd4" }}><Shield size={8}/>Admin</span>}
                   </div>
                   {/* Stats bar giống EPL */}
                   <div className="flex items-center gap-1.5 mt-1">

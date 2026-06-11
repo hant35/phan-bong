@@ -33,17 +33,36 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
     include: { user: { select: { name: true, avatar: true } } },
   })
 
+  // Lấy group match configs để hiển thị kèo riêng của hội
+  const groupConfigs = await prisma.groupMatchConfig.findMany({
+    where: { groupId: id },
+    select: { matchId: true, ahLine: true, ouLine: true, allowedBetTypes: true, pointsMultiplier: true, lockMinutes: true, blindMode: true },
+  })
+  const configMap: Record<string, { ahLine: number | null; ouLine: number | null; allowedBetTypes: string[]; pointsMultiplier: number; lockMinutes: number; blindMode: boolean }> = {}
+  for (const c of groupConfigs) {
+    configMap[c.matchId] = {
+      ahLine: c.ahLine,
+      ouLine: c.ouLine,
+      allowedBetTypes: JSON.parse(c.allowedBetTypes),
+      pointsMultiplier: c.pointsMultiplier,
+      lockMinutes: c.lockMinutes,
+      blindMode: c.blindMode,
+    }
+  }
+
   const upcomingMatches = await prisma.match.findMany({
     where: { status: "scheduled", kickoffAt: { gt: new Date() } },
     orderBy: { kickoffAt: "asc" },
     take: 5,
-    include: { predictions: { where: { userId: user.id } } },
+    include: {
+      predictions: { where: { userId: user.id, groupId: id } },
+    },
   })
 
-  // Group stats
-  const totalPicks = await prisma.prediction.count({ where: { user: { memberships: { some: { groupId: id } } } } })
-  const correctPicks = await prisma.prediction.count({ where: { user: { memberships: { some: { groupId: id } } }, result: "win" } })
-  const totalResolved = await prisma.prediction.count({ where: { user: { memberships: { some: { groupId: id } } }, result: { in: ["win", "loss"] } } })
+  // Group stats (chỉ tính predictions trong hội này)
+  const totalPicks = await prisma.prediction.count({ where: { groupId: id } })
+  const correctPicks = await prisma.prediction.count({ where: { groupId: id, result: "win" } })
+  const totalResolved = await prisma.prediction.count({ where: { groupId: id, result: { in: ["win", "loss"] } } })
 
   return <GroupDetailView
     group={{
@@ -51,28 +70,40 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
       memberCount: group._count.members, myRank, myPoints: myMembership?.points ?? 0,
       adminId: group.admin.id,
     }}
+    currentUserId={user.id}
+    myRole={myMembership?.role ?? "member"}
     members={members.map((m, i) => ({
       rank: i + 1, userId: m.userId, name: m.user.name, displayName: m.user.displayName ?? "",
       avatar: m.user.avatar ?? "??", streak: m.user.streak, points: m.points,
       wins: m.wins, losses: m.losses, skipped: m.skipped,
-      isMe: user.id === m.userId, isAdmin: m.userId === group.admin.id,
+      isMe: user.id === m.userId,
+      role: m.role,
+      isAdmin: m.role === "owner" || m.role === "admin",
     }))}
     activities={activities.map(a => ({
       id: a.id, type: a.type, action: a.action, target: a.target,
       user: a.user.name, avatar: a.user.avatar ?? "??", createdAt: a.createdAt.toISOString(),
     }))}
-    upcomingMatches={upcomingMatches.map(m => ({
-      id: m.id, homeTeam: m.homeTeam, awayTeam: m.awayTeam,
-      homeFlag: m.homeFlag, awayFlag: m.awayFlag, kickoffAt: m.kickoffAt.toISOString(),
-      ahLine: m.ahLine, ouLine: m.ouLine,
-      hasPick: m.predictions.length > 0,
-      myPick: m.predictions[0] ? {
-        betType: m.predictions[0].betType,
-        side: m.predictions[0].side,
-        homeScore: m.predictions[0].homeScore,
-        awayScore: m.predictions[0].awayScore,
-      } : null,
-    }))}
+    upcomingMatches={upcomingMatches.map(m => {
+      const cfg = configMap[m.id]
+      return {
+        id: m.id, homeTeam: m.homeTeam, awayTeam: m.awayTeam,
+        homeFlag: m.homeFlag, awayFlag: m.awayFlag, kickoffAt: m.kickoffAt.toISOString(),
+        // Group config ưu tiên hơn global
+        ahLine: cfg?.ahLine ?? m.ahLine,
+        ouLine: cfg?.ouLine ?? m.ouLine,
+        allowedBetTypes: cfg?.allowedBetTypes ?? ["ah", "ou", "exact"],
+        pointsMultiplier: cfg?.pointsMultiplier ?? 1,
+        blindMode: cfg?.blindMode ?? false,
+        hasPick: m.predictions.length > 0,
+        myPick: m.predictions[0] ? {
+          betType: m.predictions[0].betType,
+          side: m.predictions[0].side,
+          homeScore: m.predictions[0].homeScore,
+          awayScore: m.predictions[0].awayScore,
+        } : null,
+      }
+    })}
     stats={{
       totalPicks,
       winRate: totalResolved > 0 ? Math.round(correctPicks / totalResolved * 100) : 0,

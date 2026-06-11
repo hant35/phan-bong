@@ -9,9 +9,10 @@ export async function GET(req: NextRequest) {
 
   const url = new URL(req.url)
   const limit = parseInt(url.searchParams.get("limit") ?? "50")
+  const groupId = url.searchParams.get("groupId")
 
   const picks = await prisma.prediction.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id, ...(groupId ? { groupId } : {}) },
     include: { match: true },
     orderBy: { createdAt: "desc" },
     take: limit,
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     predictions: picks.map(p => ({
-      id: p.id, matchId: p.matchId,
+      id: p.id, matchId: p.matchId, groupId: p.groupId,
       match: `${p.match.homeTeam} vs ${p.match.awayTeam}`,
       homeFlag: p.match.homeFlag, awayFlag: p.match.awayFlag,
       betType: p.betType, side: p.side, homeScore: p.homeScore, awayScore: p.awayScore,
@@ -37,37 +38,52 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: "Cần đăng nhập" }, { status: 401 })
 
-  const { matchId, betType, side, homeScore, awayScore, confidence } = await req.json()
-  if (!matchId || !betType) return NextResponse.json({ error: "Thiếu dữ liệu" }, { status: 400 })
+  const { matchId, groupId, betType, side, homeScore, awayScore, confidence } = await req.json()
+  if (!matchId || !betType || !groupId) return NextResponse.json({ error: "Thiếu dữ liệu" }, { status: 400 })
 
-  // Validate betType
-  const validBetTypes = ["ah", "ou", "exact"]
-  if (!validBetTypes.includes(betType)) {
-    return NextResponse.json({ error: "Loại kèo không hợp lệ. Chỉ chấp nhận: kèo chấp, tài/xỉu, tỉ số." }, { status: 400 })
-  }
+  // Kiểm tra user là thành viên của hội này
+  const membership = await prisma.groupMember.findUnique({
+    where: { userId_groupId: { userId: user.id, groupId } },
+  })
+  if (!membership) return NextResponse.json({ error: "Bạn không phải thành viên của hội này" }, { status: 403 })
 
   const match = await prisma.match.findUnique({ where: { id: matchId } })
   if (!match) return NextResponse.json({ error: "Trận không tồn tại" }, { status: 404 })
 
-  // Rule 0: Phải vào hội mới được đoán
-  const groupCount = await prisma.groupMember.count({ where: { userId: user.id } })
-  if (groupCount === 0) {
-    return NextResponse.json({ error: "Bạn cần tham gia ít nhất một hội trước khi dự đoán" }, { status: 403 })
+  // Lấy cấu hình kèo riêng của hội (nếu có)
+  const groupConfig = await prisma.groupMatchConfig.findUnique({
+    where: { groupId_matchId: { groupId, matchId } },
+  })
+
+  // Xác định kèo áp dụng (group config ưu tiên hơn global)
+  const effectiveAhLine = groupConfig?.ahLine ?? match.ahLine
+  const effectiveOuLine = groupConfig?.ouLine ?? match.ouLine
+  const allowedBetTypes: string[] = groupConfig
+    ? JSON.parse(groupConfig.allowedBetTypes)
+    : ["ah", "ou", "exact"]
+
+  // Kiểm tra loại kèo được phép
+  if (!allowedBetTypes.includes(betType)) {
+    return NextResponse.json({ error: `Hội này không cho phép loại kèo "${betType}"` }, { status: 400 })
   }
 
-  // Rule 1: Chỉ được đoán khi trận chưa bắt đầu
+  // Rule: Chỉ được đoán khi trận chưa bắt đầu
   if (match.status !== "scheduled") return NextResponse.json({ error: "Kèo đã khóa — trận đã bắt đầu hoặc kết thúc" }, { status: 400 })
   if (match.kickoffAt.getTime() <= Date.now()) return NextResponse.json({ error: "Trận đã đến giờ đá, không thể đoán nữa" }, { status: 400 })
 
-  // Rule 2: Phải có kèo trước khi đoán (ah/ou)
-  if (betType === "ah" && match.ahLine == null) {
-    return NextResponse.json({ error: "Kèo chấp chưa được set cho trận này" }, { status: 400 })
-  }
-  if (betType === "ou" && match.ouLine == null) {
-    return NextResponse.json({ error: "Kèo tài/xỉu chưa được set cho trận này" }, { status: 400 })
+  // Kiểm tra khóa sớm theo group config (lockMinutes > 0)
+  const lockMs = (groupConfig?.lockMinutes ?? 0) * 60 * 1000
+  if (lockMs > 0 && match.kickoffAt.getTime() - Date.now() < lockMs) {
+    const mins = groupConfig!.lockMinutes
+    return NextResponse.json({ error: `Hội này khóa kèo trước ${mins} phút trước kickoff` }, { status: 400 })
   }
 
-  // Rule 3: Validate side theo betType
+  if (betType === "ah" && effectiveAhLine == null) {
+    return NextResponse.json({ error: "Kèo chấp chưa được set cho trận này" }, { status: 400 })
+  }
+  if (betType === "ou" && effectiveOuLine == null) {
+    return NextResponse.json({ error: "Kèo tài/xỉu chưa được set cho trận này" }, { status: 400 })
+  }
   if (betType === "ah" && !["home", "away"].includes(side)) {
     return NextResponse.json({ error: "Kèo chấp phải chọn Nhà hoặc Khách" }, { status: 400 })
   }
@@ -86,18 +102,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Rule 4: Confidence 1-5
   const conf = Math.max(1, Math.min(5, Math.round(confidence ?? 3)))
 
-  const isNew = !(await prisma.prediction.findUnique({ where: { userId_matchId: { userId: user.id, matchId } } }))
+  const existing = await prisma.prediction.findUnique({
+    where: { userId_matchId_groupId: { userId: user.id, matchId, groupId } },
+  })
+  const isNew = !existing
 
   const pred = await prisma.prediction.upsert({
-    where: { userId_matchId: { userId: user.id, matchId } },
+    where: { userId_matchId_groupId: { userId: user.id, matchId, groupId } },
     update: { betType, side: betType === "exact" ? null : side, homeScore, awayScore, confidence: conf },
-    create: { userId: user.id, matchId, betType, side: betType === "exact" ? null : side, homeScore, awayScore, confidence: conf },
+    create: { userId: user.id, matchId, groupId, betType, side: betType === "exact" ? null : side, homeScore, awayScore, confidence: conf },
   })
 
-  // Chỉ tạo activity + push khi đoán lần đầu (không khi sửa)
   if (isNew) {
     const pickLabel =
       betType === "exact" ? `${homeScore}–${awayScore}`
@@ -105,36 +122,31 @@ export async function POST(req: NextRequest) {
       : side === "home" ? match.homeTeam : match.awayTeam
     const matchLabel = `${match.homeTeam} vs ${match.awayTeam}`
 
-    // Lấy tất cả hội của user
-    const myGroups = await prisma.groupMember.findMany({
-      where: { userId: user.id },
-      include: { group: { include: { members: { select: { userId: true } } } } },
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: { members: { select: { userId: true } } },
     })
-
-    // Ghi activity + push cho từng hội
-    await Promise.allSettled(myGroups.map(async gm => {
-      // Activity
+    if (group) {
       await prisma.activity.create({
         data: {
           userId: user.id,
-          groupId: gm.groupId,
+          groupId,
           type: "pick",
           action: `đã đoán ${pickLabel} cho`,
           target: matchLabel,
         },
       })
 
-      // Push cho các thành viên khác trong hội
-      const others = gm.group.members.filter(m => m.userId !== user.id)
+      const others = group.members.filter(m => m.userId !== user.id)
       await Promise.allSettled(
         others.map(m => sendPushToUser(
           m.userId,
           `🎯 ${user.name} vừa đặt kèo!`,
           `${pickLabel} cho trận ${matchLabel}`,
-          `/groups/${gm.groupId}`,
+          `/groups/${groupId}`,
         ))
       )
-    }))
+    }
   }
 
   return NextResponse.json({ prediction: pred })

@@ -42,17 +42,13 @@ export function evaluatePrediction(pred: PredictionInput, match: MatchInput): { 
   switch (pred.betType) {
     case "ah": {
       // Asian Handicap: ahLine applies to HOME team
-      // ahLine = -0.5 means home gives 0.5 goals
-      // Result = diff + ahLine > 0 → home wins handicap
       if (ahLine == null) return { result: "loss", reason: "Không có kèo chấp" }
       const handicapResult = diff + ahLine
       if (pred.side === "home") {
         if (handicapResult > 0) return { result: "win", reason: `Chấp ${ahLine}: ${scoreHome}-${scoreAway}, chênh lệch thực ${diff} + (${ahLine}) = ${handicapResult} > 0 → Nhà thắng kèo` }
         if (handicapResult < 0) return { result: "loss", reason: `Chấp ${ahLine}: ${scoreHome}-${scoreAway}, chênh lệch thực ${diff} + (${ahLine}) = ${handicapResult} < 0 → Nhà thua kèo` }
-        // handicapResult === 0 → draw → refund → count as loss in this system
         return { result: "loss", reason: `Chấp ${ahLine}: ${scoreHome}-${scoreAway}, hòa kèo (hoàn tiền) → tính thua` }
       } else {
-        // side === "away"
         if (handicapResult < 0) return { result: "win", reason: `Chấp ${ahLine}: ${scoreHome}-${scoreAway}, chênh lệch thực ${diff} + (${ahLine}) = ${handicapResult} < 0 → Khách thắng kèo` }
         if (handicapResult > 0) return { result: "loss", reason: `Chấp ${ahLine}: ${scoreHome}-${scoreAway}, chênh lệch thực ${diff} + (${ahLine}) = ${handicapResult} > 0 → Khách thua kèo` }
         return { result: "loss", reason: `Chấp ${ahLine}: ${scoreHome}-${scoreAway}, hòa kèo → tính thua` }
@@ -60,14 +56,12 @@ export function evaluatePrediction(pred: PredictionInput, match: MatchInput): { 
     }
 
     case "ou": {
-      // Over/Under
       if (ouLine == null) return { result: "loss", reason: "Không có kèo tài/xỉu" }
       if (pred.side === "over") {
         if (total > ouLine) return { result: "win", reason: `Tài ${ouLine}: tổng bàn ${total} > ${ouLine} → Tài thắng` }
         if (total < ouLine) return { result: "loss", reason: `Tài ${ouLine}: tổng bàn ${total} < ${ouLine} → Tài thua` }
         return { result: "loss", reason: `Tài ${ouLine}: tổng bàn ${total} = ${ouLine} → hòa kèo → tính thua` }
       } else {
-        // side === "under"
         if (total < ouLine) return { result: "win", reason: `Xỉu ${ouLine}: tổng bàn ${total} < ${ouLine} → Xỉu thắng` }
         if (total > ouLine) return { result: "loss", reason: `Xỉu ${ouLine}: tổng bàn ${total} > ${ouLine} → Xỉu thua` }
         return { result: "loss", reason: `Xỉu ${ouLine}: tổng bàn ${total} = ${ouLine} → hòa kèo → tính thua` }
@@ -75,7 +69,6 @@ export function evaluatePrediction(pred: PredictionInput, match: MatchInput): { 
     }
 
     case "1x2": {
-      // 1X2: predict home/draw/away
       if (pred.side === "home" && diff > 0) return { result: "win", reason: `1X2: ${scoreHome}-${scoreAway} → Nhà thắng ✓` }
       if (pred.side === "draw" && diff === 0) return { result: "win", reason: `1X2: ${scoreHome}-${scoreAway} → Hòa ✓` }
       if (pred.side === "away" && diff < 0) return { result: "win", reason: `1X2: ${scoreHome}-${scoreAway} → Khách thắng ✓` }
@@ -85,7 +78,6 @@ export function evaluatePrediction(pred: PredictionInput, match: MatchInput): { 
     }
 
     case "exact": {
-      // Exact score
       if (pred.homeScore === scoreHome && pred.awayScore === scoreAway) {
         return { result: "win", reason: `Tỉ số: đoán ${pred.homeScore}-${pred.awayScore}, thực tế ${scoreHome}-${scoreAway} ✓ CHÍNH XÁC!` }
       }
@@ -103,6 +95,14 @@ export async function previewGrading(matchId: string): Promise<GradingResult | n
   const match = await prisma.match.findUnique({ where: { id: matchId } })
   if (!match || match.scoreHome == null || match.scoreAway == null) return null
 
+  // Lấy group configs để dùng kèo riêng của từng hội
+  const groupConfigs = await prisma.groupMatchConfig.findMany({
+    where: { matchId },
+    select: { groupId: true, ahLine: true, ouLine: true, pointsMultiplier: true },
+  })
+  const configMap: Record<string, { ahLine: number | null; ouLine: number | null; pointsMultiplier: number }> = {}
+  for (const c of groupConfigs) configMap[c.groupId] = { ahLine: c.ahLine, ouLine: c.ouLine, pointsMultiplier: c.pointsMultiplier }
+
   const predictions = await prisma.prediction.findMany({
     where: { matchId },
     include: { user: { select: { id: true, name: true } } },
@@ -112,9 +112,15 @@ export async function previewGrading(matchId: string): Promise<GradingResult | n
   let wins = 0, losses = 0
 
   for (const pred of predictions) {
+    const cfg = configMap[pred.groupId] ?? {}
     const { result, reason } = evaluatePrediction(
       { betType: pred.betType, side: pred.side, homeScore: pred.homeScore, awayScore: pred.awayScore },
-      { scoreHome: match.scoreHome, scoreAway: match.scoreAway, ahLine: match.ahLine, ouLine: match.ouLine },
+      {
+        scoreHome: match.scoreHome,
+        scoreAway: match.scoreAway,
+        ahLine: cfg.ahLine ?? match.ahLine,
+        ouLine: cfg.ouLine ?? match.ouLine,
+      },
     )
     details.push({ userId: pred.userId, name: pred.user.name, betType: pred.betType, result, reason })
     if (result === "win") wins++
@@ -142,6 +148,14 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
   const match = await prisma.match.findUnique({ where: { id: matchId } })
   if (!match || match.scoreHome == null || match.scoreAway == null) return null
 
+  // Lấy group configs để dùng kèo riêng của từng hội
+  const groupConfigs = await prisma.groupMatchConfig.findMany({
+    where: { matchId },
+    select: { groupId: true, ahLine: true, ouLine: true, pointsMultiplier: true },
+  })
+  const configMap: Record<string, { ahLine: number | null; ouLine: number | null; pointsMultiplier: number }> = {}
+  for (const c of groupConfigs) configMap[c.groupId] = { ahLine: c.ahLine, ouLine: c.ouLine, pointsMultiplier: c.pointsMultiplier }
+
   const predictions = await prisma.prediction.findMany({
     where: { matchId },
     include: { user: { select: { id: true, name: true } } },
@@ -150,29 +164,35 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
   const details: GradingResult["details"] = []
   let wins = 0, losses = 0
 
-  // 1. Grade each prediction
+  // 1. Grade each prediction using group-specific kèo
   for (const pred of predictions) {
+    const cfg = configMap[pred.groupId] ?? {}
     const { result, reason } = evaluatePrediction(
       { betType: pred.betType, side: pred.side, homeScore: pred.homeScore, awayScore: pred.awayScore },
-      { scoreHome: match.scoreHome, scoreAway: match.scoreAway, ahLine: match.ahLine, ouLine: match.ouLine },
+      {
+        scoreHome: match.scoreHome,
+        scoreAway: match.scoreAway,
+        ahLine: cfg.ahLine ?? match.ahLine,
+        ouLine: cfg.ouLine ?? match.ouLine,
+      },
     )
 
-    // Update prediction result
+    const multiplier = cfg.pointsMultiplier ?? 1
+    const earnedPoints = result === "win" ? multiplier : 0
+
     await prisma.prediction.update({
       where: { id: pred.id },
-      data: { result, points: result === "win" ? 1 : 0 },
+      data: { result, points: earnedPoints },
     })
 
-    // Update user stats
     if (result === "win") {
       await prisma.user.update({
         where: { id: pred.userId },
-        data: { totalPoints: { increment: 1 }, streak: { increment: 1 } },
+        data: { totalPoints: { increment: earnedPoints }, streak: { increment: 1 } },
       })
-      // Update GroupMember wins
       await prisma.groupMember.updateMany({
-        where: { userId: pred.userId },
-        data: { wins: { increment: 1 }, points: { increment: 1 } },
+        where: { userId: pred.userId, groupId: pred.groupId },
+        data: { wins: { increment: 1 }, points: { increment: earnedPoints } },
       })
       wins++
     } else {
@@ -180,9 +200,8 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
         where: { id: pred.userId },
         data: { streak: 0 },
       })
-      // Update GroupMember losses
       await prisma.groupMember.updateMany({
-        where: { userId: pred.userId },
+        where: { userId: pred.userId, groupId: pred.groupId },
         data: { losses: { increment: 1 } },
       })
       losses++
@@ -191,64 +210,61 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
     details.push({ userId: pred.userId, name: pred.user.name, betType: pred.betType, result, reason })
   }
 
-  // 2. Find group members who did NOT predict (skipped)
+  // 2. Tìm thành viên chưa đoán theo từng hội (per-group skip)
   const skippedUsers: GradingResult["skippedUsers"] = []
-  const predictedUserIds = new Set(predictions.map(p => p.userId))
 
-  // Get all groups and their members
   const groups = await prisma.group.findMany({
     include: {
       members: { include: { user: { select: { id: true, name: true } } } },
     },
   })
 
+  const predictedByGroup: Record<string, Set<string>> = {}
+  for (const pred of predictions) {
+    if (!predictedByGroup[pred.groupId]) predictedByGroup[pred.groupId] = new Set()
+    predictedByGroup[pred.groupId].add(pred.userId)
+  }
+
   for (const group of groups) {
+    const predicted = predictedByGroup[group.id] ?? new Set<string>()
     for (const member of group.members) {
-      if (!predictedUserIds.has(member.userId)) {
-        skippedUsers.push({
-          userId: member.userId,
-          name: member.user.name,
-          groupName: group.name,
+      if (!predicted.has(member.userId)) {
+        skippedUsers.push({ userId: member.userId, name: member.user.name, groupName: group.name })
+
+        // Tạo "skip" prediction cho hội này
+        const existing = await prisma.prediction.findUnique({
+          where: { userId_matchId_groupId: { userId: member.userId, matchId, groupId: group.id } },
         })
+        if (!existing) {
+          await prisma.prediction.create({
+            data: {
+              userId: member.userId,
+              matchId,
+              groupId: group.id,
+              betType: "skip",
+              side: null,
+              confidence: 0,
+              result: "loss",
+              points: 0,
+            },
+          })
+          await prisma.groupMember.updateMany({
+            where: { userId: member.userId, groupId: group.id },
+            data: { skipped: { increment: 1 } },
+          })
+        }
       }
     }
   }
 
-  // Deduplicate skipped users (may be in multiple groups)
+  // Reset streak cho những user không đoán (chỉ 1 lần dù nhiều hội)
   const seenSkipped = new Set<string>()
-  const uniqueSkipped = skippedUsers.filter(s => {
-    if (seenSkipped.has(s.userId)) return false
-    seenSkipped.add(s.userId)
-    return true
-  })
-
-  // Create "loss" predictions for skipped users (one per user, not per group)
-  for (const skipped of uniqueSkipped) {
-    // Check if prediction already exists (might have been created by another group check)
-    const existing = await prisma.prediction.findUnique({
-      where: { userId_matchId: { userId: skipped.userId, matchId } },
-    })
-    if (!existing) {
-      await prisma.prediction.create({
-        data: {
-          userId: skipped.userId,
-          matchId,
-          betType: "skip",
-          side: null,
-          confidence: 0,
-          result: "loss",
-          points: 0,
-        },
-      })
-      // streak reset for skipped users too
+  for (const s of skippedUsers) {
+    if (!seenSkipped.has(s.userId)) {
+      seenSkipped.add(s.userId)
       await prisma.user.update({
-        where: { id: skipped.userId },
+        where: { id: s.userId },
         data: { streak: 0 },
-      })
-      // Update GroupMember skipped
-      await prisma.groupMember.updateMany({
-        where: { userId: skipped.userId },
-        data: { skipped: { increment: 1 } },
       })
     }
   }
@@ -262,8 +278,8 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
     totalPredictions: predictions.length,
     wins,
     losses,
-    skipped: uniqueSkipped.length,
+    skipped: skippedUsers.length,
     details,
-    skippedUsers: uniqueSkipped,
+    skippedUsers,
   }
 }

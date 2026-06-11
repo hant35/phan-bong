@@ -34,12 +34,23 @@ interface Match {
   myPick?: { betType: string; side?: string | null; homeScore?: number | null; awayScore?: number | null; confidence: number; result?: string | null; points: number } | null
 }
 
-export function MatchDetailView({ match, currentUserId, commentCount, isInGroup }: { match: Match; currentUserId: string; commentCount: number; isInGroup: boolean }) {
+export function MatchDetailView({ match, currentUserId, commentCount, isInGroup, userGroups }: {
+  match: Match; currentUserId: string; commentCount: number; isInGroup: boolean
+  userGroups: { id: string; name: string }[]
+}) {
   const router = useRouter()
   const toast = useToast()
   const searchParams = useSearchParams()
   const backUrl = searchParams.get("from") ?? "/matches"
   const backLabel = backUrl.startsWith("/groups/") ? "← Hội" : "← Lịch trận"
+
+  // Xác định groupId: ưu tiên từ context URL, fallback sang group đầu tiên
+  const groupIdFromUrl = backUrl.startsWith("/groups/") ? backUrl.split("/groups/")[1].split("/")[0] : null
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(
+    groupIdFromUrl ?? (userGroups.length === 1 ? userGroups[0].id : null)
+  )
+  const showGroupPicker = !selectedGroupId && userGroups.length > 1
+
   const [tab, setTab] = useState<"pick" | "info" | "group">("pick")
   const [betType, setBetType] = useState(match.myPick?.betType ?? "ah")
   const [pick, setPick] = useState<string | null>(match.myPick?.side ?? null)
@@ -55,10 +66,11 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
   const confidenceLabels = ["", "Đoán đại 😅", "Hên xui 🤷", "Bình thường ×1.0", "Khá tự tin ×1.5", "Chắc như đinh 🔥×2.0"]
 
   async function submit() {
+    if (!selectedGroupId) { setError("Chọn hội muốn đoán trước"); return }
     setSubmitting(true)
     setError(null)
     try {
-      const body: any = { matchId: match.id, betType, confidence }
+      const body: Record<string, unknown> = { matchId: match.id, groupId: selectedGroupId, betType, confidence }
       if (betType === "exact") { body.homeScore = homeScore; body.awayScore = awayScore }
       else body.side = pick
       const res = await fetch("/api/predictions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
@@ -191,6 +203,35 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
       {/* Pick */}
       {tab === "pick" && (
         <div className="space-y-4">
+          {/* Group picker khi user ở nhiều hội và không có context URL */}
+          {showGroupPicker && isInGroup && !isLocked && (
+            <div className="glass rounded-2xl p-4 space-y-3">
+              <p className="text-sm font-bold text-white/60">Chọn hội để đặt kèo:</p>
+              <div className="grid grid-cols-1 gap-2">
+                {userGroups.map(g => (
+                  <button key={g.id} onClick={() => setSelectedGroupId(g.id)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all hover:scale-[1.01]"
+                    style={{ background: "rgba(0,230,118,0.06)", border: "1px solid rgba(0,230,118,0.15)" }}>
+                    <span className="text-xl">🏟️</span>
+                    <span className="font-semibold text-white text-sm">{g.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Hiện group đang đoán (khi đã chọn và có nhiều hội) */}
+          {selectedGroupId && userGroups.length > 1 && !isLocked && !submitted && (
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs text-white/30">
+                Đoán cho: <span className="text-white/60 font-semibold">{userGroups.find(g => g.id === selectedGroupId)?.name}</span>
+              </span>
+              <button onClick={() => setSelectedGroupId(null)} className="text-xs text-white/25 hover:text-white/50 transition-colors underline">
+                Đổi hội
+              </button>
+            </div>
+          )}
+
           {!isInGroup && !isLocked ? (
             <div className="glass rounded-2xl p-6 text-center space-y-4">
               <div className="text-4xl">🏟️</div>

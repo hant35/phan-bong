@@ -26,9 +26,18 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   const draw = m.predictions.length - home - away
 
   const commentCount = await prisma.comment.count({ where: { matchId: id } })
-  const myPick = m.predictions.find(p => p.userId === user.id)
-  const groupCount = await prisma.groupMember.count({ where: { userId: user.id } })
-  const isInGroup = groupCount > 0
+
+  const userMemberships = await prisma.groupMember.findMany({
+    where: { userId: user.id },
+    orderBy: { joinedAt: "asc" },
+    include: { group: { select: { id: true, name: true } } },
+  })
+  const isInGroup = userMemberships.length > 0
+  const userGroups = userMemberships.map(mem => ({ id: mem.group.id, name: mem.group.name }))
+
+  // Lấy pick của user từ group đầu tiên
+  const firstGroupId = userGroups[0]?.id
+  const myPick = m.predictions.find(p => p.userId === user.id && (!firstGroupId || p.groupId === firstGroupId))
 
   const data = {
     id: m.id,
@@ -62,7 +71,13 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
   return (
     <Suspense fallback={null}>
-      <MatchDetailView match={data} currentUserId={user.id} commentCount={commentCount} isInGroup={isInGroup} />
+      <MatchDetailView
+        match={data}
+        currentUserId={user.id}
+        commentCount={commentCount}
+        isInGroup={isInGroup}
+        userGroups={userGroups}
+      />
     </Suspense>
   )
 }

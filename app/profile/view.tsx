@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { Settings, Award, TrendingUp, Target, Flame, Clock, ChevronRight, Sparkles, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagUrl } from "@/lib/format"
+import { PushToggle } from "@/components/pwa-init"
 
 interface Props {
   user: { name: string; displayName: string | null; avatar: string; totalPoints: number; streak: number; createdAt: string; rank: number; total: number; correct: number }
@@ -55,9 +56,12 @@ export function ProfileView({ user, badges, statsByType, recentPicks, rankContex
                 <p className="text-xs text-white/50 mt-1">Tham gia từ {new Date(user.createdAt).toLocaleDateString("vi-VN")}</p>
               </div>
             </div>
-            <button onClick={logout} className="p-2 rounded-xl hover:bg-white/5 transition-colors" title="Đăng xuất">
-              <LogOut size={18} className="text-white/30" />
-            </button>
+            <div className="flex items-center gap-2">
+              <PushToggle />
+              <button onClick={logout} className="p-2 rounded-xl hover:bg-white/5 transition-colors" title="Đăng xuất">
+                <LogOut size={18} className="text-white/30" />
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
