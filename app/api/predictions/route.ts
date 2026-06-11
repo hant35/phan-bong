@@ -50,17 +50,18 @@ export async function POST(req: NextRequest) {
   const match = await prisma.match.findUnique({ where: { id: matchId } })
   if (!match) return NextResponse.json({ error: "Trận không tồn tại" }, { status: 404 })
 
-  // Lấy cấu hình kèo riêng của hội (nếu có)
+  // Bắt buộc GroupMatchConfig phải tồn tại — admin hội phải mở kèo trước
   const groupConfig = await prisma.groupMatchConfig.findUnique({
     where: { groupId_matchId: { groupId, matchId } },
   })
+  if (!groupConfig) {
+    return NextResponse.json({ error: "Admin hội chưa mở kèo cho trận này. Liên hệ admin hội để cấu hình." }, { status: 400 })
+  }
 
-  // Xác định kèo áp dụng (group config ưu tiên hơn global)
-  const effectiveAhLine = groupConfig?.ahLine ?? match.ahLine
-  const effectiveOuLine = groupConfig?.ouLine ?? match.ouLine
-  const allowedBetTypes: string[] = groupConfig
-    ? JSON.parse(groupConfig.allowedBetTypes)
-    : ["ah", "ou", "exact"]
+  // Xác định kèo áp dụng (group config ưu tiên hơn global, fallback global)
+  const effectiveAhLine = groupConfig.ahLine ?? match.ahLine
+  const effectiveOuLine = groupConfig.ouLine ?? match.ouLine
+  const allowedBetTypes: string[] = JSON.parse(groupConfig.allowedBetTypes)
 
   // Kiểm tra loại kèo được phép
   if (!allowedBetTypes.includes(betType)) {

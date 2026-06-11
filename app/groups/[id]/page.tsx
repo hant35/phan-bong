@@ -50,8 +50,13 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
     }
   }
 
+  // Chỉ lấy matches mà admin hội đã cấu hình kèo (GroupMatchConfig phải tồn tại)
   const upcomingMatches = await prisma.match.findMany({
-    where: { status: "scheduled", kickoffAt: { gt: new Date() } },
+    where: {
+      status: "scheduled",
+      kickoffAt: { gt: new Date() },
+      groupConfigs: { some: { groupId: id } },
+    },
     orderBy: { kickoffAt: "asc" },
     take: 5,
     include: {

@@ -246,6 +246,20 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
           </div>
 
           {/* Trận sắp tới – đoán inline */}
+          {upcomingMatches.length === 0 && (
+            <div className="rounded-3xl px-5 py-8 text-center space-y-2"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)" }}>
+              <div className="text-2xl">⚙️</div>
+              <p className="text-sm font-bold text-white/40">Admin hội chưa mở kèo cho trận nào</p>
+              {isGroupAdmin
+                ? <Link href={`/groups/${group.id}/admin`} className="inline-block mt-1 text-xs font-bold px-3 py-1.5 rounded-xl"
+                    style={{ background: "rgba(0,230,118,0.1)", color: "#00e676", border: "1px solid rgba(0,230,118,0.2)" }}>
+                    Vào trang Quản trị để mở kèo →
+                  </Link>
+                : <p className="text-xs text-white/25">Liên hệ admin hội để cấu hình kèo cho các trận sắp tới</p>
+              }
+            </div>
+          )}
           {upcomingMatches.length > 0 && (
             <div className="rounded-3xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
@@ -258,7 +272,10 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
               <div className="divide-y divide-white/5">
                 {upcomingMatches.map(match => {
                   const ps = getPickState(match.id, match)
-                  const hasKeo = match.ahLine != null || match.ouLine != null
+                  // Có ít nhất 1 loại kèo khả dụng: exact luôn OK; ah cần ahLine; ou cần ouLine
+                  const hasKeo = match.allowedBetTypes.includes("exact")
+                    || (match.allowedBetTypes.includes("ah") && match.ahLine != null)
+                    || (match.allowedBetTypes.includes("ou") && match.ouLine != null)
                   const sideLabel = ps.side === "home" ? match.homeTeam
                     : ps.side === "away" ? match.awayTeam
                     : ps.side === "over" ? "Tài" : ps.side === "under" ? "Xỉu" : null
