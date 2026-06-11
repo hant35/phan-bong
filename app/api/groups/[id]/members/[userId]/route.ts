@@ -16,11 +16,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Role không hợp lệ" }, { status: 400 })
   }
 
+  const isSuperAdmin = user.role === "superadmin"
   const myMembership = await prisma.groupMember.findUnique({
     where: { userId_groupId: { userId: user.id, groupId } },
   })
-  if (!myMembership || myMembership.role !== "owner") {
-    return NextResponse.json({ error: "Chỉ chủ hội mới được phân quyền admin" }, { status: 403 })
+  const myRole = myMembership?.role
+  if (!isSuperAdmin && myRole !== "owner" && myRole !== "admin") {
+    return NextResponse.json({ error: "Bạn không có quyền phân quyền trong hội này" }, { status: 403 })
   }
 
   const target = await prisma.groupMember.findUnique({
@@ -28,6 +30,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   })
   if (!target) return NextResponse.json({ error: "Thành viên không tồn tại" }, { status: 404 })
   if (target.role === "owner") return NextResponse.json({ error: "Không thể thay đổi quyền của chủ hội" }, { status: 400 })
+
+  // Admin chỉ được phong admin (member→admin), không được thu hồi admin khác (phải là owner)
+  if (!isSuperAdmin && myRole === "admin" && role === "member" && target.role === "admin") {
+    return NextResponse.json({ error: "Admin không thể thu hồi quyền của admin khác. Chỉ chủ hội mới làm được." }, { status: 403 })
+  }
 
   const updated = await prisma.groupMember.update({
     where: { userId_groupId: { userId: targetId, groupId } },

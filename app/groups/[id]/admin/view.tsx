@@ -405,12 +405,16 @@ export function GroupAdminView({
       {tab === "members" && (
         <div className="space-y-2">
           <p className="text-xs text-white/30 px-1 mb-3">
-            {myRole === "owner" ? "Chủ hội: phong/thu hồi admin và kick thành viên." : "Admin: kick thành viên."}
+            Admin và chủ hội đều có thể phong admin mới. Chỉ chủ hội mới thu hồi quyền admin.
           </p>
           {members.map(m => {
             const roleInfo = ROLE_LABELS[m.role]
             const isMe = m.userId === currentUserId
             const isLoading = memberLoading === m.userId
+            // admin có thể phong (member→admin), nhưng chỉ owner mới thu hồi (admin→member)
+            const canPromote = m.role === "member"
+            const canDemote = m.role === "admin" && myRole === "owner"
+            const showRoleBtn = !isMe && m.role !== "owner" && (canPromote || canDemote)
 
             return (
               <div key={m.userId} className="flex items-center gap-3 px-4 py-3.5 rounded-2xl"
@@ -435,14 +439,14 @@ export function GroupAdminView({
 
                 {!isMe && m.role !== "owner" && (
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {myRole === "owner" && (
-                      <button onClick={() => setRole(m.userId, m.role === "admin" ? "member" : "admin")}
+                    {showRoleBtn && (
+                      <button onClick={() => setRole(m.userId, canDemote ? "member" : "admin")}
                         disabled={isLoading}
                         className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all disabled:opacity-50"
-                        style={m.role === "admin"
+                        style={canDemote
                           ? { background: "rgba(0,188,212,0.1)", color: "#00bcd4", border: "1px solid rgba(0,188,212,0.2)" }
-                          : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                        {m.role === "admin" ? "Thu hồi" : "Phong admin"}
+                          : { background: "rgba(0,230,118,0.08)", color: "#00e676", border: "1px solid rgba(0,230,118,0.2)" }}>
+                        {canDemote ? "Thu hồi admin" : "⬆ Phong admin"}
                       </button>
                     )}
                     {(myRole === "owner" || (myRole === "admin" && m.role === "member")) && (
