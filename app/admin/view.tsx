@@ -22,7 +22,7 @@ interface GroupData {
 
 interface UserData {
   id: string; name: string; avatar: string | null; role: string
-  email: string; hasGoogle: boolean; totalPoints: number
+  email: string; hasGoogle: boolean; groupPointsSum: number
   predictionCount: number; groupCount: number; createdAt: string
 }
 
@@ -1021,7 +1021,7 @@ export function AdminView({
                       </div>
                       <div className="flex items-center gap-2 justify-end">
                         <span className="text-[10px]" style={{ color: "#ffd700" }}>⬡</span>
-                        <span className="text-xs font-bold" style={{ color: "#ffd700" }}>{u.totalPoints}</span>
+                        <span className="text-xs font-bold" style={{ color: "#ffd700" }}>{u.groupPointsSum}</span>
                       </div>
                     </div>
                   </div>

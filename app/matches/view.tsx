@@ -94,7 +94,7 @@ export function MatchesView({ matches, myPickedCount, userPoints }: {
       <div className="grid grid-cols-3 gap-3 mb-5">
         {[
           { label: "Đã đoán", value: `${myPickedCount}/${matches.length}`, gradient: "linear-gradient(135deg, #00e676, #00bcd4)" },
-          { label: "Tổng xu", value: `${userPoints}`, gradient: "linear-gradient(135deg, #ffd700, #ff8f00)" },
+          { label: "Xu (các hội)", value: `${userPoints}`, gradient: "linear-gradient(135deg, #ffd700, #ff8f00)" },
           { label: "Tỉ lệ đúng", value: `${winPct}%`, gradient: "linear-gradient(135deg, #7c3aed, #ec4899)" },
         ].map(({ label, value, gradient }) => (
           <div key={label} className="glass rounded-2xl p-3 text-center relative overflow-hidden">

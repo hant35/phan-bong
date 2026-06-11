@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
 import { randomBytes } from "crypto"
+import { GROUP_STARTING_POINTS } from "@/lib/group-points"
 
 export async function GET() {
   const user = await getCurrentUser()
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
       visibility: visibility === "public" ? "public" : "private",
       inviteCode,
       adminId: user.id,
-      members: { create: { userId: user.id, role: "owner" } },
+      members: { create: { userId: user.id, role: "owner", points: GROUP_STARTING_POINTS } },
     },
   })
   return NextResponse.json({ group })

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
+import { getLeaderboardFromGroupPoints, sumUserGroupPoints } from "@/lib/group-points"
 import { ProfileView } from "./view"
 
 export default async function ProfilePage() {
@@ -40,17 +41,20 @@ export default async function ProfilePage() {
     actualScore: p.match.scoreHome !== null ? `${p.match.scoreHome}-${p.match.scoreAway}` : null,
   }))
 
-  // Rank context
-  const leaderboard = await prisma.user.findMany({ orderBy: { totalPoints: "desc" }, select: { id: true, name: true, avatar: true, totalPoints: true } })
-  const myIdx = leaderboard.findIndex(u => u.id === user.id)
+  const [groupPointsSum, leaderboard] = await Promise.all([
+    sumUserGroupPoints(user.id),
+    getLeaderboardFromGroupPoints(),
+  ])
+  const myIdx = leaderboard.findIndex(u => u.userId === user.id)
   const aboveMe = myIdx > 0 ? leaderboard[myIdx - 1] : null
-  const belowMe = myIdx < leaderboard.length - 1 ? leaderboard[myIdx + 1] : null
+  const belowMe = myIdx >= 0 && myIdx < leaderboard.length - 1 ? leaderboard[myIdx + 1] : null
 
   return <ProfileView
     user={{
       name: user.name, displayName: user.displayName, statusText: user.statusText ?? null, avatar: user.avatar ?? "BN",
-      totalPoints: user.totalPoints, streak: user.streak, createdAt: user.createdAt.toISOString(),
-      rank: myIdx + 1, total: predictions.filter(p => p.result === "win" || p.result === "loss").length,
+      groupPointsSum, streak: user.streak, createdAt: user.createdAt.toISOString(),
+      rank: myIdx >= 0 ? myIdx + 1 : leaderboard.length + 1,
+      total: predictions.filter(p => p.result === "win" || p.result === "loss").length,
       correct: predictions.filter(p => p.result === "win").length,
     }}
     badges={badges.map(b => ({ ...b, earned: ownedSet.has(b.code) }))}
@@ -62,8 +66,8 @@ export default async function ProfilePage() {
     ]}
     recentPicks={recentPicks}
     rankContext={{
-      above: aboveMe ? { name: aboveMe.name, avatar: aboveMe.avatar ?? "??", points: aboveMe.totalPoints, rank: myIdx } : null,
-      below: belowMe ? { name: belowMe.name, avatar: belowMe.avatar ?? "??", points: belowMe.totalPoints, rank: myIdx + 2 } : null,
+      above: aboveMe ? { name: aboveMe.user.name, avatar: aboveMe.user.avatar ?? "??", points: aboveMe.points, rank: myIdx } : null,
+      below: belowMe ? { name: belowMe.user.name, avatar: belowMe.user.avatar ?? "??", points: belowMe.points, rank: myIdx + 2 } : null,
     }}
   />
 }

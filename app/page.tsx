@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
 import { flagUrl, formatCountdown, formatDateTimeParts, timeAgo } from "@/lib/format"
 import { LiveMatchBar } from "@/components/live-match-card"
+import { getLeaderboardFromGroupPoints, sumUserGroupPoints } from "@/lib/group-points"
 
 const activityColors: Record<string, string> = {
   pick: "#ec4899", win: "#00e676", join: "#00bcd4", badge: "#ffd700",
@@ -29,11 +30,10 @@ export default async function HomePage() {
     include: { user: { select: { name: true, avatar: true } } },
   })
 
-  const topUsers = await prisma.user.findMany({
-    orderBy: { totalPoints: "desc" },
-    take: 3,
-    select: { name: true, totalPoints: true, avatar: true },
-  })
+  const [totalGroupXu, topUsers] = await Promise.all([
+    sumUserGroupPoints(user.id),
+    getLeaderboardFromGroupPoints().then(rows => rows.slice(0, 3)),
+  ])
 
   const myGroups = await prisma.groupMember.findMany({
     where: { userId: user.id },
@@ -194,11 +194,11 @@ export default async function HomePage() {
         <div className="rounded-3xl p-5"
           style={{ background: "linear-gradient(135deg, rgba(0,230,118,0.06), rgba(0,188,212,0.04))", border: "1px solid rgba(255,255,255,0.06)" }}>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-white/40 uppercase tracking-widest">Tổng xu</span>
+            <span className="text-xs font-bold text-white/40 uppercase tracking-widest">Tổng xu (các hội)</span>
             <TrendingUp size={14} className="text-[#00e676]" />
           </div>
           <div className="flex items-baseline gap-2 mb-3">
-            <span className="text-3xl font-black text-white">{user.totalPoints}</span>
+            <span className="text-3xl font-black text-white">{totalGroupXu}</span>
             <span className="text-sm font-bold text-[#00e676]">xu</span>
           </div>
           <p className="text-xs text-white/30">Tham gia từ {user.createdAt.toLocaleDateString("vi-VN")}</p>
@@ -294,12 +294,12 @@ export default async function HomePage() {
             </div>
             <div className="flex flex-col gap-2.5">
               {topUsers.map((e, i) => (
-                <div key={e.name} className="flex items-center gap-2">
+                <div key={e.userId} className="flex items-center gap-2">
                   <span className="text-base">{["🥇","🥈","🥉"][i]}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-white truncate">{e.name.split(" ").slice(-2).join(" ")}</div>
+                    <div className="text-xs font-bold text-white truncate">{e.user.name.split(" ").slice(-2).join(" ")}</div>
                   </div>
-                  <span className="text-xs font-black" style={{ color: "#ffd700" }}>{e.totalPoints}</span>
+                  <span className="text-xs font-black" style={{ color: "#ffd700" }}>{e.points}</span>
                 </div>
               ))}
             </div>

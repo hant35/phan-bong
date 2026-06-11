@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
+import { GROUP_STARTING_POINTS } from "@/lib/group-points"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -84,7 +85,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   // Reset tất cả GroupMember stats
   await prisma.groupMember.updateMany({
     where: { groupId },
-    data: { points: 0, wins: 0, losses: 0, skipped: 0 },
+    data: { points: GROUP_STARTING_POINTS, wins: 0, losses: 0, skipped: 0 },
   })
 
   // Ghi activity

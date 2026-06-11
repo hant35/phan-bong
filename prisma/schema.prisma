@@ -18,7 +18,7 @@ model User {
   avatar       String?
   role         String        @default("user")
   googleId     String?       @unique
-  totalPoints  Int           @default(100)
+  totalPoints  Int           @default(0) // deprecated — xu theo GroupMember.points
   streak       Int           @default(0)
   createdAt    DateTime      @default(now())
   activities        Activity[]

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
+import { GROUP_STARTING_POINTS } from "@/lib/group-points"
 import { sendPushToUser } from "@/lib/push"
 
 const JOIN_MSGS = [
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
     select: { userId: true },
   })
 
-  await prisma.groupMember.create({ data: { userId: user.id, groupId: group.id, points: 0 } })
+  await prisma.groupMember.create({ data: { userId: user.id, groupId: group.id, points: GROUP_STARTING_POINTS } })
   await prisma.activity.create({
     data: { userId: user.id, groupId: group.id, type: "join", action: "vừa tham gia hội", target: group.name },
   })

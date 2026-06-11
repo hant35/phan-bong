@@ -23,14 +23,21 @@ export default async function AdminPage() {
     },
   })
 
-  const users = await prisma.user.findMany({
-    select: {
-      id: true, name: true, avatar: true, role: true,
-      email: true, googleId: true, totalPoints: true, createdAt: true,
-      _count: { select: { predictions: true, memberships: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  })
+  const [users, pointSums] = await Promise.all([
+    prisma.user.findMany({
+      select: {
+        id: true, name: true, avatar: true, role: true,
+        email: true, googleId: true, createdAt: true,
+        _count: { select: { predictions: true, memberships: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.groupMember.groupBy({
+      by: ["userId"],
+      _sum: { points: true },
+    }),
+  ])
+  const groupPointsByUser = new Map(pointSums.map(p => [p.userId, p._sum.points ?? 0]))
 
   return <AdminView
     matches={matches.map(m => ({
@@ -68,7 +75,7 @@ export default async function AdminPage() {
       id: u.id, name: u.name, avatar: u.avatar, role: u.role,
       email: u.email,
       hasGoogle: !!u.googleId,
-      totalPoints: u.totalPoints,
+      groupPointsSum: groupPointsByUser.get(u.id) ?? 0,
       predictionCount: u._count.predictions,
       groupCount: u._count.memberships,
       createdAt: u.createdAt.toISOString(),

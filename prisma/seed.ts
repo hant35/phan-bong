@@ -365,11 +365,13 @@ async function main() {
   // GROUP MEMBERS (50+)
   // ═══════════════════════════════════════════
   console.log("👤 Tạo memberships...")
-  // Helper: tạo stats từ points
-  function memberStats(pts: number) {
-    const wins = Math.floor(pts * 0.7) + Math.floor(Math.abs(pts * 0.3))
-    const losses = Math.max(1, Math.floor(pts * 0.4))
-    const skipped = pts < 10 ? Math.floor(pts * 0.15) + 1 : Math.floor(pts * 0.05)
+  const GROUP_START = 100
+  // Helper: tạo stats — 100 xu ban đầu + offset demo
+  function memberStats(delta: number) {
+    const pts = GROUP_START + delta
+    const wins = Math.floor(delta * 0.7) + 3
+    const losses = Math.max(1, Math.floor(delta * 0.4))
+    const skipped = delta < 10 ? 2 : 1
     return { points: pts, wins, losses, skipped }
   }
 
@@ -610,7 +612,7 @@ async function main() {
     }
     await prisma.user.update({
       where: { id: user.id },
-      data: { totalPoints: wins, streak },
+      data: { streak },
     })
   }
 
@@ -856,10 +858,16 @@ async function main() {
   console.log(`     (tất cả 20 users cùng mật khẩu)`)
 
   // Hiển thị bảng xếp hạng
-  const topUsers = await prisma.user.findMany({ orderBy: { totalPoints: "desc" }, take: 10 })
-  console.log("\n  🏆 TOP 10:")
-  topUsers.forEach((u, i) => {
-    console.log(`     ${String(i+1).padStart(2)}. ${u.name.padEnd(22)} ${u.totalPoints} điểm | streak ${u.streak}`)
+  const pointSums = await prisma.groupMember.groupBy({ by: ["userId"], _sum: { points: true } })
+  const usersById = new Map(users.map(u => [u.id, u]))
+  const topRows = pointSums
+    .map(p => ({ user: usersById.get(p.userId)!, points: p._sum.points ?? 0 }))
+    .filter(r => r.user)
+    .sort((a, b) => b.points - a.points)
+    .slice(0, 10)
+  console.log("\n  🏆 TOP 10 (tổng xu các hội):")
+  topRows.forEach((r, i) => {
+    console.log(`     ${String(i+1).padStart(2)}. ${r.user.name.padEnd(22)} ${r.points} xu | streak ${r.user.streak}`)
   })
 
   // Hiển thị trạng thái matches

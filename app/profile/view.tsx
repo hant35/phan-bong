@@ -10,7 +10,7 @@ import { flagUrl } from "@/lib/format"
 import { PushToggle, PushSettingsPanel } from "@/components/pwa-init"
 
 interface Props {
-  user: { name: string; displayName: string | null; statusText: string | null; avatar: string; totalPoints: number; streak: number; createdAt: string; rank: number; total: number; correct: number }
+  user: { name: string; displayName: string | null; statusText: string | null; avatar: string; groupPointsSum: number; streak: number; createdAt: string; rank: number; total: number; correct: number }
   badges: { code: string; name: string; emoji: string; description: string; earned: boolean }[]
   statsByType: { type: string; correct: number; total: number; color: string; disabled?: boolean }[]
   recentPicks: { id: string; match: string; homeFlag: string; awayFlag: string; pickLabel: string; confidence: number; result: string; points: number; actualScore: string | null }[]
@@ -155,7 +155,7 @@ export function ProfileView({ user, badges, statsByType, recentPicks, rankContex
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
-              { label: "Xu", value: user.totalPoints, gradient: "linear-gradient(135deg, #ffd700, #ff8f00)" },
+              { label: "Xu (các hội)", value: user.groupPointsSum, gradient: "linear-gradient(135deg, #ffd700, #ff8f00)" },
               { label: "Hạng", value: `#${user.rank}`, gradient: "linear-gradient(135deg, #7c3aed, #ec4899)" },
               { label: "Đúng", value: `${winRate}%`, gradient: "linear-gradient(135deg, #00e676, #00bcd4)" },
               { label: "Streak", value: `${user.streak}🔥`, gradient: "linear-gradient(135deg, #ff5252, #ff8f00)" },
@@ -203,7 +203,7 @@ export function ProfileView({ user, badges, statsByType, recentPicks, rankContex
                     style={{ background: "linear-gradient(135deg, #0288d1, #26c6da)", color: "white" }}>{rankContext.above.avatar}</div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold text-white truncate">{rankContext.above.name}</div>
-                    <div className="text-[10px] text-white/30">Trên bạn {rankContext.above.points - user.totalPoints} xu</div>
+                    <div className="text-[10px] text-white/30">Trên bạn {rankContext.above.points - user.groupPointsSum} xu</div>
                   </div>
                   <span className="text-sm font-black text-white">{rankContext.above.points}</span>
                 </div>
@@ -217,7 +217,7 @@ export function ProfileView({ user, badges, statsByType, recentPicks, rankContex
                   <div className="text-sm font-bold text-[#00e676] truncate">Bạn</div>
                   <div className="text-[10px] text-white/40">{user.correct}/{user.total} đúng · {winRate}%</div>
                 </div>
-                <span className="text-sm font-black text-[#00e676]">{user.totalPoints}</span>
+                <span className="text-sm font-black text-[#00e676]">{user.groupPointsSum}</span>
               </div>
               {rankContext.below && (
                 <div className="rounded-xl p-3 flex items-center gap-3" style={{ background: "rgba(255,255,255,0.03)" }}>
@@ -226,7 +226,7 @@ export function ProfileView({ user, badges, statsByType, recentPicks, rankContex
                     style={{ background: "linear-gradient(135deg, #ff5252, #ff1744)", color: "white" }}>{rankContext.below.avatar}</div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold text-white truncate">{rankContext.below.name}</div>
-                    <div className="text-[10px] text-white/30">Đuổi bạn — cách {user.totalPoints - rankContext.below.points} xu</div>
+                    <div className="text-[10px] text-white/30">Đuổi bạn — cách {user.groupPointsSum - rankContext.below.points} xu</div>
                   </div>
                   <span className="text-sm font-black text-white">{rankContext.below.points}</span>
                 </div>

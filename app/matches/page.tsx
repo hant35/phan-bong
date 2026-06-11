@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
+import { sumUserGroupPoints } from "@/lib/group-points"
 import { MatchesView } from "./view"
 
 export default async function MatchesPage() {
@@ -41,5 +42,6 @@ export default async function MatchesPage() {
   }))
 
   const myPickedCount = data.filter(m => m.myPick).length
-  return <MatchesView matches={data} myPickedCount={myPickedCount} userPoints={user.totalPoints} />
+  const userPoints = await sumUserGroupPoints(user.id)
+  return <MatchesView matches={data} myPickedCount={myPickedCount} userPoints={userPoints} />
 }

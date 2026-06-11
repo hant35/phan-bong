@@ -2,7 +2,6 @@
 // Ngôi sao hi vọng — thưởng/phạt xu theo mức mạo hiểm
 // ══════════════════════════════════════════════════════════════
 
-export const INITIAL_USER_POINTS = 100
 export const DEFAULT_HOPE_STAR = 1
 
 /** index 1..5 → xu thưởng khi thắng */

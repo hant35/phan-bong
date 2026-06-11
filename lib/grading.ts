@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/db"
-import { syncGroupMemberPoints } from "@/lib/group-points"
 import { clampPoints, hopeStarDelta } from "@/lib/hope-star"
 
 // ══════════════════════════════════════════════════════════════
@@ -97,21 +96,14 @@ async function applyHopeStarPoints(
   delta: number,
   result: "win" | "loss",
 ): Promise<void> {
-  const [user, member] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { totalPoints: true } }),
-    prisma.groupMember.findUnique({
-      where: { userId_groupId: { userId, groupId } },
-      select: { points: true },
-    }),
-  ])
-  if (!user) return
-
   await prisma.user.update({
     where: { id: userId },
-    data: {
-      totalPoints: clampPoints(user.totalPoints, delta),
-      streak: result === "win" ? { increment: 1 } : 0,
-    },
+    data: { streak: result === "win" ? { increment: 1 } : 0 },
+  })
+
+  const member = await prisma.groupMember.findUnique({
+    where: { userId_groupId: { userId, groupId } },
+    select: { points: true },
   })
 
   if (member) {
@@ -308,16 +300,6 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
         data: { streak: 0 },
       })
     }
-  }
-
-  // Đồng bộ xu trong hội từ tổng prediction (nguồn đúng)
-  const syncTargets = new Map<string, Set<string>>()
-  for (const pred of predictions) {
-    if (!syncTargets.has(pred.groupId)) syncTargets.set(pred.groupId, new Set())
-    syncTargets.get(pred.groupId)!.add(pred.userId)
-  }
-  for (const [groupId, userIds] of syncTargets) {
-    await syncGroupMemberPoints(groupId, [...userIds])
   }
 
   return {
