@@ -410,7 +410,9 @@ export async function syncOpenFootball(): Promise<SyncResult> {
     }
     const data = await res.json()
     const localMatches = await prisma.match.findMany()
-    const allExtMatches = (data.rounds || []).flatMap((round: { matches?: unknown[] }) => round.matches || [])
+    const allExtMatches = Array.isArray(data.matches)
+      ? data.matches
+      : (data.rounds || []).flatMap((round: { matches?: unknown[] }) => round.matches || [])
 
     result.response = {
       status: res.status, statusText: res.statusText,

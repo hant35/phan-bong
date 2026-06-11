@@ -21,12 +21,12 @@ export async function GET(req: NextRequest) {
   const now = new Date()
   const results: string[] = []
 
-  // ── 1. scheduled → live: trận đã đến giờ kickoff (trong vòng 4 giờ gần nhất) ──
-  const fourHoursAgo = new Date(now.getTime() - 4 * 60 * 60 * 1000)
+  // ── 1. scheduled → live: trận đã đến giờ kickoff (trong vòng 48 giờ gần nhất) ──
+  const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000)
   const shouldStart = await prisma.match.findMany({
     where: {
       status: "scheduled",
-      kickoffAt: { lte: now, gte: fourHoursAgo },
+      kickoffAt: { lte: now, gte: fortyEightHoursAgo },
     },
   })
 
@@ -62,7 +62,34 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // ── 2. live quá 120 phút → tự kết thúc (safety net) ──
+  // ── 2. scheduled/live đã có tỉ số, qua giờ đá > 105 phút → tự kết thúc ──
+  const shouldFinish = await prisma.match.findMany({
+    where: {
+      status: { in: ["scheduled", "live"] },
+      scoreHome: { not: null },
+      scoreAway: { not: null },
+      kickoffAt: { lte: new Date(now.getTime() - 105 * 60 * 1000) },
+    },
+  })
+
+  for (const match of shouldFinish) {
+    await prisma.match.update({
+      where: { id: match.id },
+      data: { status: "finished" },
+    })
+    results.push(`🏁 ${match.homeTeam} vs ${match.awayTeam} → FINISHED (${match.scoreHome}-${match.scoreAway})`)
+
+    try {
+      const gr = await gradeMatch(match.id)
+      if (gr) {
+        results.push(`🏆 Chấm điểm: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
+      }
+    } catch (e) {
+      results.push(`❌ Lỗi chấm điểm: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  // ── 3. live quá 120 phút → tự kết thúc (safety net) ──
   const staleLive = await prisma.match.findMany({
     where: {
       status: "live",
@@ -90,7 +117,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // ── 3. Tự tăng minute cho trận live ──
+  // ── 4. Tự tăng minute cho trận live ──
   const liveMatches = await prisma.match.findMany({
     where: { status: "live" },
   })
@@ -110,6 +137,7 @@ export async function GET(req: NextRequest) {
     ok: true,
     timestamp: now.toISOString(),
     started: shouldStart.length,
+    finished: shouldFinish.length,
     liveUpdated: liveMatches.length,
     staleWarnings: staleLive.length,
     log: results,

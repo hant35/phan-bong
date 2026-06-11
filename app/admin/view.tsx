@@ -1448,6 +1448,7 @@ interface GradingMatch {
   score: string
   kickoffAt: string
   status: string
+  dbStatus?: string
   totalPredictions: number
   graded: number
   ungraded: number
@@ -1464,16 +1465,25 @@ function GradingPanel() {
   const [grading, setGrading] = useState<string | null>(null) // matchId đang chấm
   const [gradeAllResult, setGradeAllResult] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   async function loadStatus() {
     setLoading(true)
+    setLoadError(null)
     try {
       const res = await fetch("/api/admin/grade")
       const data = await res.json()
+      if (!res.ok) {
+        setLoadError(data.error ?? `Không tải được dữ liệu (${res.status})`)
+        setMatches([])
+        setUngradedCount(0)
+        return
+      }
       setMatches(data.matches ?? [])
       setUngradedCount(data.ungradedMatches ?? 0)
       setLastRefresh(new Date().toLocaleTimeString("vi-VN"))
     } catch {
+      setLoadError("Lỗi kết nối khi tải danh sách trận")
       setMatches([])
     } finally {
       setLoading(false)
@@ -1573,6 +1583,14 @@ function GradingPanel() {
           </div>
         )}
 
+        {/* Load error */}
+        {loadError && (
+          <div className="rounded-xl p-3 text-xs text-center"
+            style={{ background: "rgba(255,82,82,0.06)", border: "1px solid rgba(255,82,82,0.15)", color: "#ff5252" }}>
+            {loadError}
+          </div>
+        )}
+
         {/* Grade all result */}
         {gradeAllResult && (
           <div className="rounded-xl p-3 text-xs font-mono whitespace-pre-wrap"
@@ -1588,7 +1606,10 @@ function GradingPanel() {
         {loading && matches.length === 0 ? (
           <div className="text-center py-8 text-white/30 text-sm">Đang tải...</div>
         ) : matches.length === 0 ? (
-          <div className="text-center py-8 text-white/30 text-sm">Chưa có trận nào kết thúc</div>
+          <div className="text-center py-8 text-white/30 text-sm">
+            Chưa có trận nào kết thúc.<br />
+            <span className="text-white/20 text-xs mt-1 block">Cập nhật tỉ số và chuyển trạng thái sang &quot;Kết thúc&quot; ở tab Trận đấu, hoặc đồng bộ từ API.</span>
+          </div>
         ) : (
           <div className="space-y-2">
             {matches.map(m => (
@@ -1603,6 +1624,11 @@ function GradingPanel() {
                     )}>
                       {m.ungraded > 0 ? `${m.ungraded} chưa chấm` : "Đã chấm"}
                     </span>
+                    {"dbStatus" in m && m.dbStatus !== "finished" && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/15 text-amber-400">
+                        {String(m.dbStatus).toUpperCase()}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 mt-1 text-[10px] text-white/30">
                     <span>{m.totalPredictions} dự đoán</span>
@@ -1612,7 +1638,7 @@ function GradingPanel() {
                     {m.groups.length > 0 && <span>Hội: {m.groups.join(", ")}</span>}
                   </div>
                 </div>
-                {m.ungraded > 0 && (
+                {(m.ungraded > 0 || ("dbStatus" in m && m.dbStatus !== "finished")) && (
                   <button onClick={() => gradeOne(m.matchId)} disabled={grading !== null}
                     className="px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all disabled:opacity-50 flex-shrink-0"
                     style={{ background: "rgba(0,230,118,0.12)", color: "#00e676", border: "1px solid rgba(0,230,118,0.2)" }}>
