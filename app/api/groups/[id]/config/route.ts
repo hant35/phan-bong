@@ -109,7 +109,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const members = await prisma.groupMember.findMany({ where: { groupId }, select: { userId: true } })
 
-  const typeLabels: Record<string, string> = { ah: "kèo chấp", ou: "tài/xỉu", exact: "tỉ số" }
+  const typeLabels: Record<string, string> = { ah: "kèo chấp", ou: "tổng bàn thắng", exact: "tỉ số" }
   const typesLabel = types.map(t => typeLabels[t]).join(", ")
   const extras = [
     multiplier > 1 ? `×${multiplier} điểm` : null,
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const pushDetails = [
     typesLabel,
     ahLine != null ? `chấp ${ahLine}` : null,
-    ouLine != null ? `tài/xỉu ${ouLine}` : null,
+    ouLine != null ? `tổng bàn thắng ${ouLine}` : null,
     multiplier > 1 ? `×${multiplier} điểm 🔥` : null,
   ].filter(Boolean).join(" · ")
 

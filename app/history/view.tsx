@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 import { flagUrl, BET_TYPE_LABEL } from "@/lib/format"
 
 const FILTERS = ["Tất cả", "Thắng", "Thua", "Đang chờ", "Live"]
-const BET_TYPES = ["Tất cả kèo", "Kèo chấp", "Tài/Xỉu", "Tỉ số"]
+const BET_TYPES = ["Tất cả kèo", "Kèo chấp", "Tổng bàn thắng", "Tỉ số"]
 
 interface Pick {
   id: string; match: string; homeFlag: string; awayFlag: string;

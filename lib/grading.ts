@@ -56,15 +56,15 @@ export function evaluatePrediction(pred: PredictionInput, match: MatchInput): { 
     }
 
     case "ou": {
-      if (ouLine == null) return { result: "loss", reason: "Không có kèo tài/xỉu" }
+      if (ouLine == null) return { result: "loss", reason: "Không có kèo tổng bàn thắng" }
       if (pred.side === "over") {
-        if (total > ouLine) return { result: "win", reason: `Tài ${ouLine}: tổng bàn ${total} > ${ouLine} → Tài thắng` }
-        if (total < ouLine) return { result: "loss", reason: `Tài ${ouLine}: tổng bàn ${total} < ${ouLine} → Tài thua` }
-        return { result: "loss", reason: `Tài ${ouLine}: tổng bàn ${total} = ${ouLine} → hòa kèo → tính thua` }
+        if (total > ouLine) return { result: "win", reason: `Trên ${ouLine}: tổng bàn ${total} > ${ouLine} → Trên thắng` }
+        if (total < ouLine) return { result: "loss", reason: `Trên ${ouLine}: tổng bàn ${total} < ${ouLine} → Trên thua` }
+        return { result: "loss", reason: `Trên ${ouLine}: tổng bàn ${total} = ${ouLine} → hòa kèo → tính thua` }
       } else {
-        if (total < ouLine) return { result: "win", reason: `Xỉu ${ouLine}: tổng bàn ${total} < ${ouLine} → Xỉu thắng` }
-        if (total > ouLine) return { result: "loss", reason: `Xỉu ${ouLine}: tổng bàn ${total} > ${ouLine} → Xỉu thua` }
-        return { result: "loss", reason: `Xỉu ${ouLine}: tổng bàn ${total} = ${ouLine} → hòa kèo → tính thua` }
+        if (total < ouLine) return { result: "win", reason: `Dưới ${ouLine}: tổng bàn ${total} < ${ouLine} → Dưới thắng` }
+        if (total > ouLine) return { result: "loss", reason: `Dưới ${ouLine}: tổng bàn ${total} > ${ouLine} → Dưới thua` }
+        return { result: "loss", reason: `Dưới ${ouLine}: tổng bàn ${total} = ${ouLine} → hòa kèo → tính thua` }
       }
     }
 

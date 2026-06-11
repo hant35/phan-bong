@@ -115,7 +115,7 @@ export async function PATCH(req: NextRequest) {
     }
     if (currentMatch.ouLine == null && ouLine === undefined) {
       return NextResponse.json({
-        error: "Phải set kèo tài/xỉu (O/U) trước khi bắt đầu trận đấu."
+        error: "Phải set kèo tổng bàn thắng (O/U) trước khi bắt đầu trận đấu."
       }, { status: 400 })
     }
   }

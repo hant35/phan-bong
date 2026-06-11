@@ -54,7 +54,7 @@ export function flagUrl(code: string) {
 
 export const BET_TYPE_LABEL: Record<string, string> = {
   ah: "Kèo chấp",
-  ou: "Tài/Xỉu",
+  ou: "Tổng bàn thắng",
   exact: "Tỉ số",
   "1x2": "1X2",
 }

@@ -38,7 +38,7 @@ const ROLE_LABELS: Record<string, { label: string; icon: React.ReactNode; color:
 
 const BET_TYPE_INFO: Record<string, string> = {
   ah: "Kèo chấp",
-  ou: "Tài/Xỉu",
+  ou: "Tổng bàn thắng",
   exact: "Tỉ số",
 }
 
@@ -298,11 +298,11 @@ export function GroupAdminView({
                       </div>
                     )}
 
-                    {/* Tài/Xỉu */}
+                    {/* Tổng bàn thắng */}
                     {cfg.allowedBetTypes.includes("ou") && (
                       <div>
                         <div className="text-[11px] font-bold text-white/40 uppercase tracking-wider mb-2">
-                          Tài/Xỉu (số bàn)
+                          Tổng bàn thắng (số bàn)
                           {match.globalOuLine != null && <span className="normal-case font-normal text-white/20 ml-1">(Global: {match.globalOuLine})</span>}
                         </div>
                         <input type="number" step="0.25" min="0" value={cfg.ouLine}

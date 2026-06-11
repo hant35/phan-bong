@@ -83,13 +83,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Kèo chấp chưa được set cho trận này" }, { status: 400 })
   }
   if (betType === "ou" && effectiveOuLine == null) {
-    return NextResponse.json({ error: "Kèo tài/xỉu chưa được set cho trận này" }, { status: 400 })
+    return NextResponse.json({ error: "Kèo tổng bàn thắng chưa được set cho trận này" }, { status: 400 })
   }
   if (betType === "ah" && !["home", "away"].includes(side)) {
     return NextResponse.json({ error: "Kèo chấp phải chọn Nhà hoặc Khách" }, { status: 400 })
   }
   if (betType === "ou" && !["over", "under"].includes(side)) {
-    return NextResponse.json({ error: "Tài/xỉu phải chọn Tài hoặc Xỉu" }, { status: 400 })
+    return NextResponse.json({ error: "Tổng bàn thắng phải chọn Trên hoặc Dưới" }, { status: 400 })
   }
   if (betType === "exact") {
     if (homeScore == null || awayScore == null || homeScore < 0 || awayScore < 0) {
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
   if (isNew) {
     const pickLabel =
       betType === "exact" ? `${homeScore}–${awayScore}`
-      : betType === "ou" ? (side === "over" ? "Tài" : "Xỉu")
+      : betType === "ou" ? (side === "over" ? "Trên" : "Dưới")
       : side === "home" ? match.homeTeam : match.awayTeam
     const matchLabel = `${match.homeTeam} vs ${match.awayTeam}`
 

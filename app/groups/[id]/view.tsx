@@ -274,7 +274,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                   )
                   const sideLabel = ps.side === "home" ? match.homeTeam
                     : ps.side === "away" ? match.awayTeam
-                    : ps.side === "over" ? "Tài" : ps.side === "under" ? "Xỉu" : null
+                    : ps.side === "over" ? "Trên" : ps.side === "under" ? "Dưới" : null
 
                   const { homeCount, awayCount, overCount, underCount } = match.predStats
                   const ahTotal = homeCount + awayCount
@@ -341,7 +341,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                           {match.ouLine != null && (
                             <div className="flex-1 px-2.5 py-1.5 rounded-lg text-center"
                               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                              <div className="text-[9px] text-white/30 font-bold uppercase tracking-wide">Tài/Xỉu</div>
+                              <div className="text-[9px] text-white/30 font-bold uppercase tracking-wide">Tổng bàn thắng</div>
                               <div className="text-xs font-black text-white/80">{match.ouLine}</div>
                             </div>
                           )}
@@ -368,7 +368,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                             <div>
                               <div className="flex justify-between text-[9px] text-white/30 mb-0.5">
                                 <span>Tài {overPct}%</span>
-                                <span>{ouTotal} người đoán tài/xỉu</span>
+                                <span>{ouTotal} người đoán tổng bàn thắng</span>
                                 <span>{underPct}% Xỉu</span>
                               </div>
                               <div className="flex h-1.5 rounded-full overflow-hidden gap-px">
@@ -410,7 +410,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                         <div className="space-y-2">
                           {match.allowedBetTypes.filter(t => t !== "exact").length > 1 && (
                             <div className="flex gap-1.5">
-                              {[{ id: "ah", label: "Kèo chấp" }, { id: "ou", label: "Tài/Xỉu" }]
+                              {[{ id: "ah", label: "Kèo chấp" }, { id: "ou", label: "Tổng bàn thắng" }]
                                 .filter(bt => match.allowedBetTypes.includes(bt.id))
                                 .map(bt => (
                                   <button key={bt.id} onClick={() => setPick(match.id, "betType", bt.id)}
@@ -451,8 +451,8 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                           {ps.betType === "ou" && match.ouLine != null && (
                             <div className="flex gap-2">
                               {[
-                                { id: "over", label: "Tài", sub: `> ${match.ouLine} bàn`, color: "#00e676" },
-                                { id: "under", label: "Xỉu", sub: `≤ ${match.ouLine} bàn`, color: "#ff5252" },
+                                { id: "over", label: "Trên", sub: `> ${match.ouLine} bàn`, color: "#00e676" },
+                                { id: "under", label: "Dưới", sub: `≤ ${match.ouLine} bàn`, color: "#ff5252" },
                               ].map(opt => (
                                 <button key={opt.id} onClick={() => setPick(match.id, "side", opt.id)}
                                   className="flex-1 py-2.5 rounded-xl border text-center transition-all"
