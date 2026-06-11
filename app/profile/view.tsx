@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { Award, TrendingUp, Target, Clock, ChevronRight, Sparkles, LogOut, Pencil, Check, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagUrl } from "@/lib/format"
-import { PushToggle } from "@/components/pwa-init"
+import { PushToggle, PushSettingsPanel } from "@/components/pwa-init"
 
 interface Props {
   user: { name: string; displayName: string | null; statusText: string | null; avatar: string; totalPoints: number; streak: number; createdAt: string; rank: number; total: number; correct: number }
@@ -169,6 +169,10 @@ export function ProfileView({ user, badges, statsByType, recentPicks, rankContex
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="mb-4">
+        <PushSettingsPanel />
       </div>
 
       <div className="flex gap-1 mb-4 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)" }}>
