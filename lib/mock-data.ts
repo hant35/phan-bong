@@ -102,7 +102,7 @@ export const mockMatches = [
 
 export const mockLeaderboard = [
   { rank: 1, name: "Trần Văn Phán", displayName: "Thần Phán Đêm Khuya", avatar: "TVP", points: 285, correct: 18, total: 22, streak: 4, trend: +2, badges: ["🎯", "🔥"] },
-  { rank: 2, name: "Nguyễn Thị Dự", displayName: "Vua Tài Xỉu", avatar: "NTD", points: 260, correct: 16, total: 22, streak: 2, trend: 0, badges: ["🎰"] },
+  { rank: 2, name: "Nguyễn Thị Dự", displayName: "Vua Tổng Bàn", avatar: "NTD", points: 260, correct: 16, total: 22, streak: 2, trend: 0, badges: ["🎰"] },
   { rank: 3, name: "Lê Minh Đoán", displayName: "Cao Thủ Kèo Chấp", avatar: "LMD", points: 245, correct: 15, total: 22, streak: 1, trend: -1, badges: ["🏆"] },
   { rank: 4, name: "Phạm Quang Kèo", displayName: "Người Đi Ngược Dòng", avatar: "PQK", points: 220, correct: 14, total: 22, streak: 0, trend: +3, badges: ["🌊"] },
   { rank: 5, name: "Hoàng Tiến Sỹ", displayName: "Tín Đồ Argentina", avatar: "HTS", points: 195, correct: 12, total: 22, streak: 0, trend: -2, badges: [] },
@@ -137,7 +137,7 @@ export const mockActivityFeed = [
   { id: "a1", type: "pick", user: "Lê Minh Đoán", avatar: "LMD", action: "vừa đoán", target: "Brazil 2-0 Mexico", betType: "Tỉ số chính xác", time: "2 phút", color: "#ec4899" },
   { id: "a2", type: "win", user: "Trần Văn Phán", avatar: "TVP", action: "thắng", target: "+25 xu (Argentina chấp -2.5)", time: "8 phút", color: "#00e676" },
   { id: "a3", type: "join", user: "Phạm Quang Kèo", avatar: "PQK", action: "vừa tham gia hội", target: "Hội IT Đoán Bóng", time: "15 phút", color: "#00bcd4" },
-  { id: "a4", type: "badge", user: "Nguyễn Thị Dự", avatar: "NTD", action: "nhận badge mới", target: "🎰 Vua Tài Xỉu", time: "30 phút", color: "#ffd700" },
+  { id: "a4", type: "badge", user: "Nguyễn Thị Dự", avatar: "NTD", action: "nhận badge mới", target: "🎰 Vua Tổng Bàn", time: "30 phút", color: "#ffd700" },
   { id: "a5", type: "loss", user: "Vũ Đức Mơ", avatar: "VDM", action: "thua", target: "-15 xu (Tây Ban Nha tỉ số 2-0)", time: "1 giờ", color: "#ff5252" },
   { id: "a6", type: "comment", user: "Hoàng Tiến Sỹ", avatar: "HTS", action: "bình luận", target: "trong trận Pháp vs Đức", time: "2 giờ", color: "#7c3aed" },
   { id: "a7", type: "rank", user: "Bạn", avatar: "BN", action: "lên hạng", target: "#6 (+1)", time: "3 giờ", color: "#00e676" },
@@ -147,11 +147,11 @@ export const mockActivityFeed = [
 export const mockRecentPicks = [
   { id: "p1", match: "Tây Ban Nha vs Morocco", homeFlag: "es", awayFlag: "ma", pickLabel: "TBN tỉ số 2-0", betType: "exact", confidence: 4, result: "loss", points: -15, kickoffAt: new Date(Date.now() - 4*3600000), actualScore: "2-1" },
   { id: "p2", match: "Argentina vs Saudi Arabia", homeFlag: "ar", awayFlag: "sa", pickLabel: "Argentina chấp -2.5", betType: "ah", confidence: 5, result: "live", points: 0, kickoffAt: new Date(Date.now() - 35*60000), actualScore: "1-0 (54')" },
-  { id: "p3", match: "Pháp vs Đức", homeFlag: "fr", awayFlag: "de", pickLabel: "Tài 2.5", betType: "ou", confidence: 3, result: "pending", points: 0, kickoffAt: new Date(Date.now() + 3*3600000), actualScore: null },
+  { id: "p3", match: "Pháp vs Đức", homeFlag: "fr", awayFlag: "de", pickLabel: "Trên 2.5", betType: "ou", confidence: 3, result: "pending", points: 0, kickoffAt: new Date(Date.now() + 3*3600000), actualScore: null },
   { id: "p4", match: "Hà Lan vs Bỉ", homeFlag: "nl", awayFlag: "be", pickLabel: "Hà Lan thắng", betType: "1x2", confidence: 4, result: "win", points: 18, kickoffAt: new Date(Date.now() - 26*3600000), actualScore: "3-1" },
   { id: "p5", match: "Ý vs Croatia", homeFlag: "it", awayFlag: "hr", pickLabel: "Hòa", betType: "1x2", confidence: 2, result: "loss", points: -8, kickoffAt: new Date(Date.now() - 50*3600000), actualScore: "0-2" },
   { id: "p6", match: "Bồ Đào Nha vs Ghana", homeFlag: "pt", awayFlag: "gh", pickLabel: "BĐN chấp -1.5", betType: "ah", confidence: 4, result: "win", points: 22, kickoffAt: new Date(Date.now() - 74*3600000), actualScore: "3-0" },
-  { id: "p7", match: "Nhật Bản vs Costa Rica", homeFlag: "jp", awayFlag: "cr", pickLabel: "Xỉu 2.5", betType: "ou", confidence: 3, result: "win", points: 12, kickoffAt: new Date(Date.now() - 98*3600000), actualScore: "1-0" },
+  { id: "p7", match: "Nhật Bản vs Costa Rica", homeFlag: "jp", awayFlag: "cr", pickLabel: "Dưới 2.5", betType: "ou", confidence: 3, result: "win", points: 12, kickoffAt: new Date(Date.now() - 98*3600000), actualScore: "1-0" },
   { id: "p8", match: "Hàn Quốc vs Uruguay", homeFlag: "kr", awayFlag: "uy", pickLabel: "Hàn Quốc tỉ số 1-1", betType: "exact", confidence: 2, result: "loss", points: -10, kickoffAt: new Date(Date.now() - 122*3600000), actualScore: "0-0" },
 ]
 

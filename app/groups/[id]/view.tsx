@@ -169,32 +169,32 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
           style={{ background: "radial-gradient(circle, #00e676 0%, transparent 70%)", transform: "translate(20%,-20%)" }} />
         <div className="relative p-5">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-xl font-black text-white">{group.name}</h1>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"
+          <div className="flex flex-col gap-3 mb-3 md:flex-row md:items-start md:justify-between md:gap-0">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-col items-start gap-1.5 mb-1.5 md:flex-row md:items-center md:gap-2 md:mb-1">
+                <h1 className="text-xl font-black text-white leading-tight">{group.name}</h1>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 flex-shrink-0"
                   style={group.visibility === "private"
                     ? { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.35)" }
                     : { background: "rgba(0,188,212,0.1)", color: "#00bcd4" }}>
                   {group.visibility === "private" ? <><Lock size={9}/> Riêng tư</> : <><Globe size={9}/> Công khai</>}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-white/30">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/30">
                 <span className="flex items-center gap-1"><Users size={11}/> {group.memberCount} thành viên</span>
                 <span>Hạng <strong className="text-white/50">{group.myRank}</strong> / {group.memberCount}</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2 md:justify-start md:flex-shrink-0">
               {isGroupAdmin && (
                 <Link href={`/groups/${group.id}/admin`}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all hover:scale-105 flex-shrink-0"
                   style={{ background: "rgba(0,230,118,0.08)", border: "1px solid rgba(0,230,118,0.15)", color: "#00e676" }}>
                   <Settings size={11}/> Quản trị
                 </Link>
               )}
               <button onClick={copy}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex-shrink-0 ml-auto md:ml-0"
                 style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
                 {group.inviteCode}
                 {copied ? <Check size={11} style={{ color: "#00e676" }}/> : <Copy size={11}/>}
@@ -357,9 +357,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                             {match.ouLine != null && (
                               <span className="text-[8px] md:text-[7px] font-bold px-1 rounded"
                                 style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" }}>
-                                <span className="md:hidden">Tổng </span>
-                                <span className="hidden md:inline">T/X </span>
-                                {match.ouLine}
+                                Tổng {match.ouLine}
                               </span>
                             )}
                             {match.pointsMultiplier > 1 && (
@@ -427,12 +425,12 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                           {ouTotal > 0 && (
                             <div>
                               <div className="flex justify-between text-[9px] md:text-[8px] text-white/30 mb-0.5 md:mb-px gap-1">
-                                <span>Tài {overPct}%</span>
+                                <span>Trên {overPct}%</span>
                                 <span className="flex-shrink-0 text-center">
                                   <span className="md:hidden">{ouTotal} người đoán tổng bàn thắng</span>
-                                  <span className="hidden md:inline">T/X · {ouTotal}</span>
+                                  <span className="hidden md:inline">Tổng bàn thắng · {ouTotal}</span>
                                 </span>
-                                <span>{underPct}% Xỉu</span>
+                                <span>{underPct}% Dưới</span>
                               </div>
                               <div className="flex h-1.5 md:h-1 rounded-full overflow-hidden gap-px">
                                 <div className="rounded-l-full transition-all" style={{ width: `${overPct}%`, background: "linear-gradient(90deg,#ffd700,#ff8f00)" }} />
@@ -474,7 +472,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                         <div className="space-y-2 md:space-y-1.5">
                           {match.allowedBetTypes.filter(t => t !== "exact").length > 1 && (
                             <div className="flex gap-1.5 md:gap-1">
-                              {[{ id: "ah", label: "Kèo chấp", short: "Chấp" }, { id: "ou", label: "Tổng bàn thắng", short: "T/X" }]
+                              {[{ id: "ah", label: "Kèo chấp" }, { id: "ou", label: "Tổng bàn thắng" }]
                                 .filter(bt => match.allowedBetTypes.includes(bt.id))
                                 .map(bt => (
                                   <button key={bt.id} onClick={() => setPick(match.id, "betType", bt.id)}
@@ -483,8 +481,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                                     style={ps.betType === bt.id
                                       ? { background: "linear-gradient(135deg,#00e676,#00bcd4)" }
                                       : { background: "rgba(255,255,255,0.05)" }}>
-                                    <span className="md:hidden">{bt.label}</span>
-                                    <span className="hidden md:inline">{bt.short}</span>
+                                    {bt.label}
                                   </button>
                                 ))}
                             </div>
@@ -722,7 +719,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                           <span className="text-[7px] md:text-[6px] font-bold px-0.5 rounded text-white/40">C{match.ahLine > 0 ? "+" : ""}{match.ahLine}</span>
                         )}
                         {match.ouLine != null && (
-                          <span className="text-[7px] md:text-[6px] font-bold px-0.5 rounded text-white/40">T/X{match.ouLine}</span>
+                          <span className="text-[7px] md:text-[6px] font-bold px-0.5 rounded text-white/40">Tổng {match.ouLine}</span>
                         )}
                         {match.pointsMultiplier > 1 && (
                           <span className="text-[7px] md:text-[6px] font-black px-0.5 rounded" style={{ color: "#ffd700" }}>×{match.pointsMultiplier}</span>

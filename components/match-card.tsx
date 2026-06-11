@@ -232,7 +232,7 @@ export function MatchCard({ match, compact = false }: { match: MatchCardData; co
               <span>Chấp <strong className="text-white/50">{match.ahLine > 0 ? `+${match.ahLine}` : match.ahLine}</strong></span>
             )}
             {match.ouLine !== null && match.ouLine !== undefined && (
-              <span>T/X <strong className="text-white/50">{match.ouLine}</strong></span>
+              <span>Tổng bàn thắng <strong className="text-white/50">{match.ouLine}</strong></span>
             )}
           </div>
           <PickBadge match={match} isUrgent={isUrgent} />

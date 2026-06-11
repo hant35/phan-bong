@@ -60,7 +60,7 @@ export default async function ProfilePage() {
     badges={badges.map(b => ({ ...b, earned: ownedSet.has(b.code) }))}
     statsByType={[
       { type: "Kèo chấp", correct: winsByType.ah?.wins ?? 0, total: winsByType.ah?.total ?? 0, color: "#00e676" },
-      { type: "Tài / Xỉu", correct: winsByType.ou?.wins ?? 0, total: winsByType.ou?.total ?? 0, color: "#00bcd4" },
+      { type: "Tổng bàn thắng", correct: winsByType.ou?.wins ?? 0, total: winsByType.ou?.total ?? 0, color: "#00bcd4" },
       { type: "Tỉ số", correct: winsByType.exact?.wins ?? 0, total: winsByType.exact?.total ?? 0, color: "#ffd700" },
       { type: "1X2", correct: winsByType["1x2"]?.wins ?? 0, total: winsByType["1x2"]?.total ?? 0, color: "#7c3aed", disabled: true },
     ]}

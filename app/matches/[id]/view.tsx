@@ -163,7 +163,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup,
             )}
             {match.ouLine !== null && (
               <div className="glass rounded-xl px-3 py-1.5 text-xs">
-                <span className="text-white/30">T/X </span>
+                <span className="text-white/30">Tổng bàn thắng </span>
                 <span className="font-bold text-white/70">{match.ouLine}</span>
               </div>
             )}
@@ -338,7 +338,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup,
                 <div className="px-3 py-2.5 rounded-xl text-xs text-white/50 leading-relaxed"
                   style={{ background: "rgba(0,188,212,0.05)", border: "1px solid rgba(0,188,212,0.1)" }}>
                   <span className="text-[#00bcd4] font-bold">📊 Tổng bàn thắng {match.ouLine}:</span>{" "}
-                  Chọn <strong className="text-white/70">Tài</strong> nếu tổng số bàn thắng cả hai đội nhiều hơn {match.ouLine}. Chọn <strong className="text-white/70">Xỉu</strong> nếu ít hơn hoặc bằng {match.ouLine} bàn.
+                  Chọn <strong className="text-white/70">Trên</strong> nếu tổng số bàn thắng cả hai đội nhiều hơn {match.ouLine}. Chọn <strong className="text-white/70">Dưới</strong> nếu ít hơn hoặc bằng {match.ouLine} bàn.
                 </div>
               )}
 
@@ -635,7 +635,7 @@ function OddsExplainer({ homeTeam, awayTeam, ahLine, ouLine }: {
     }
   }
 
-  // ── Tài xỉu explanation ──
+  // ── Tổng bàn thắng explanation ──
   function explainOU(line: number): { summary: string; over: string; under: string; draw?: string } {
     const isHalf = line % 1 === 0.5
     const isWhole = line % 1 === 0
@@ -710,7 +710,7 @@ function OddsExplainer({ homeTeam, awayTeam, ahLine, ouLine }: {
         <div className="rounded-xl p-3.5 space-y-2.5" style={{ background: "rgba(0,188,212,0.04)", border: "1px solid rgba(0,188,212,0.1)" }}>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-black px-2 py-0.5 rounded-md" style={{ background: "rgba(0,188,212,0.15)", color: "#00bcd4" }}>
-              T/X {ouLine}
+              Tổng bàn thắng {ouLine}
             </span>
             <span className="text-xs font-bold text-white/60">Tổng bàn thắng (O/U)</span>
           </div>

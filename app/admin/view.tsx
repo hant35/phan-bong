@@ -443,7 +443,7 @@ export function AdminView({
                         className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[#00e676]/50"
                       />
                     </div>
-                    {/* Tài xỉu */}
+                    {/* Tổng bàn thắng */}
                     <div>
                       <label className="text-[10px] text-white/30 uppercase font-bold block mb-1">Tổng bàn thắng (O/U)</label>
                       <input type="number" step="0.25"
@@ -1110,16 +1110,16 @@ export function AdminView({
                 </div>
               </div>
 
-              {/* Section 2: Tài xỉu */}
+              {/* Section 2: Tổng bàn thắng */}
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-black"
                     style={{ background: "rgba(0,188,212,0.15)", color: "#00bcd4" }}>2</span>
-                  <h3 className="font-bold text-white">Tài / Xỉu (Over/Under — O/U)</h3>
+                  <h3 className="font-bold text-white">Tổng bàn thắng (Over/Under — O/U)</h3>
                 </div>
                 <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   <p className="text-sm text-white/60 leading-relaxed">
-                    Tổng số bàn thắng của trận đấu so với mốc bạn đặt. User đoán <span className="text-white font-bold">Tài</span> (tổng bàn &gt; mốc) hoặc <span className="text-white font-bold">Xỉu</span> (tổng bàn &lt; mốc).
+                    Tổng số bàn thắng của trận đấu so với mốc bạn đặt. User đoán <span className="text-white font-bold">Trên</span> (tổng bàn &gt; mốc) hoặc <span className="text-white font-bold">Dưới</span> (tổng bàn &lt; mốc).
                   </p>
                   <div className="space-y-2">
                     <div className="flex items-start gap-3 p-3 rounded-xl bg-white/3">
@@ -1133,14 +1133,14 @@ export function AdminView({
                       <span className="text-base">📊</span>
                       <div>
                         <div className="text-sm font-bold text-white">3.0</div>
-                        <div className="text-xs text-white/40">Tổng bàn 4+ = Tài. Tổng bàn 0-2 = Xỉu. Đúng 3 bàn = hòa (hoàn xu).</div>
+                        <div className="text-xs text-white/40">Tổng bàn 4+ = Trên. Tổng bàn 0-2 = Dưới. Đúng 3 bàn = hòa (hoàn xu).</div>
                       </div>
                     </div>
                     <div className="flex items-start gap-3 p-3 rounded-xl bg-white/3">
                       <span className="text-base">📊</span>
                       <div>
                         <div className="text-sm font-bold text-white">3.5</div>
-                        <div className="text-xs text-white/40">Dùng cho trận dự kiến nhiều bàn. Tổng bàn 4+ = Tài. Tổng bàn 0-3 = Xỉu.</div>
+                        <div className="text-xs text-white/40">Dùng cho trận dự kiến nhiều bàn. Tổng bàn 4+ = Trên. Tổng bàn 0-3 = Dưới.</div>
                       </div>
                     </div>
                   </div>
@@ -1193,7 +1193,7 @@ export function AdminView({
                       </div>
                       <div className="pb-4">
                         <div className="text-sm font-bold text-white">Trước trận</div>
-                        <div className="text-xs text-white/40 mt-1">Set kèo chấp (AH) và tài xỉu (O/U) dựa trên phân tích đội. Có thể điều chỉnh nhiều lần trước khi trận bắt đầu.</div>
+                        <div className="text-xs text-white/40 mt-1">Set kèo chấp (AH) và tổng bàn thắng (O/U) dựa trên phân tích đội. Có thể điều chỉnh nhiều lần trước khi trận bắt đầu.</div>
                       </div>
                     </div>
                     <div className="flex gap-3">
