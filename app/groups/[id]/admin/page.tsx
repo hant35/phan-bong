@@ -8,7 +8,7 @@ export default async function GroupAdminPage({ params }: { params: Promise<{ id:
   const user = await getCurrentUser()
   if (!user) redirect("/login")
 
-  const isSuperAdmin = user.role === "superadmin"
+  const isSuperAdmin = user.role === "admin"
 
   const membership = await prisma.groupMember.findUnique({
     where: { userId_groupId: { userId: user.id, groupId: id } },

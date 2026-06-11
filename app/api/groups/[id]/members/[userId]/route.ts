@@ -16,7 +16,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Role không hợp lệ" }, { status: 400 })
   }
 
-  const isSuperAdmin = user.role === "superadmin"
+  const isSuperAdmin = user.role === "admin"
   const myMembership = await prisma.groupMember.findUnique({
     where: { userId_groupId: { userId: user.id, groupId } },
   })

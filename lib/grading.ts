@@ -164,8 +164,14 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
   const details: GradingResult["details"] = []
   let wins = 0, losses = 0
 
-  // 1. Grade each prediction using group-specific kèo
+  // 1. Grade each prediction — bỏ qua prediction đã có result (idempotent)
   for (const pred of predictions) {
+    if (pred.result !== null) {
+      if (pred.result === "win") wins++
+      else if (pred.result === "loss") losses++
+      details.push({ userId: pred.userId, name: pred.user.name, betType: pred.betType, result: pred.result as "win" | "loss", reason: "Đã chấm" })
+      continue
+    }
     const cfg = configMap[pred.groupId] ?? {}
     const { result, reason } = evaluatePrediction(
       { betType: pred.betType, side: pred.side, homeScore: pred.homeScore, awayScore: pred.awayScore },
@@ -213,7 +219,10 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
   // 2. Tìm thành viên chưa đoán theo từng hội (per-group skip)
   const skippedUsers: GradingResult["skippedUsers"] = []
 
+  // Chỉ xét các hội đã mở kèo cho trận này (có GroupMatchConfig)
+  const configuredGroupIds = new Set(groupConfigs.map(c => c.groupId))
   const groups = await prisma.group.findMany({
+    where: { id: { in: [...configuredGroupIds] } },
     include: {
       members: { include: { user: { select: { id: true, name: true } } } },
     },

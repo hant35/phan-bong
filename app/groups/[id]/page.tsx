@@ -76,7 +76,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
       adminId: group.admin.id,
     }}
     currentUserId={user.id}
-    myRole={user.role === "superadmin" ? "owner" : (myMembership?.role ?? "member")}
+    myRole={user.role === "admin" ? "owner" : (myMembership?.role ?? "member")}
     members={members.map((m, i) => ({
       rank: i + 1, userId: m.userId, name: m.user.name, displayName: m.user.displayName ?? "",
       avatar: m.user.avatar ?? "??", streak: m.user.streak, points: m.points,

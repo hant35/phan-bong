@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       visibility: visibility === "public" ? "public" : "private",
       inviteCode,
       adminId: user.id,
-      members: { create: { userId: user.id } },
+      members: { create: { userId: user.id, role: "owner" } },
     },
   })
   return NextResponse.json({ group })
