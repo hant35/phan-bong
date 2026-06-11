@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Shield, Zap, Users, Trash2, Save, Check, X, UserMinus, ChevronDown, ChevronUp, Search, HelpCircle, Plus, RefreshCw, Database, CheckSquare, Square, AlertCircle, CheckCircle2, Bell, Send } from "lucide-react"
+import { Shield, Zap, Users, Trash2, Save, Check, X, UserMinus, ChevronDown, ChevronUp, Search, HelpCircle, Plus, RefreshCw, Database, CheckSquare, Square, AlertCircle, CheckCircle2, Bell, Send, Trophy } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagUrl, formatDateTimeParts } from "@/lib/format"
 
@@ -26,7 +26,7 @@ interface UserData {
   predictionCount: number; groupCount: number; createdAt: string
 }
 
-type Tab = "matches" | "groups" | "sync" | "notify" | "users"
+type Tab = "matches" | "groups" | "sync" | "notify" | "users" | "grading"
 
 export function AdminView({
   matches, groups, users,
@@ -339,6 +339,7 @@ export function AdminView({
     { id: "matches", label: "Quản lý kèo", icon: <Zap size={15} /> },
     { id: "groups", label: "Quản lý hội", icon: <Users size={15} /> },
     { id: "sync", label: "Đồng bộ dữ liệu", icon: <Database size={15} /> },
+    { id: "grading", label: "Chấm điểm", icon: <Trophy size={15} /> },
     { id: "notify", label: "Thông báo", icon: <Bell size={15} /> },
     { id: "users", label: "Người dùng", icon: <Users size={15} /> },
   ]
@@ -839,6 +840,9 @@ export function AdminView({
           )}
         </div>
       )}
+
+      {/* ══════════ GRADING TAB ══════════ */}
+      {tab === "grading" && <GradingPanel />}
 
       {/* ══════════ NOTIFY TAB ══════════ */}
       {tab === "notify" && (
@@ -1430,6 +1434,196 @@ export function AdminView({
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// Grading Panel — tab chấm điểm
+// ══════════════════════════════════════════════════════════════
+
+interface GradingMatch {
+  matchId: string
+  match: string
+  score: string
+  kickoffAt: string
+  status: string
+  totalPredictions: number
+  graded: number
+  ungraded: number
+  wins: number
+  losses: number
+  skips: number
+  groups: string[]
+}
+
+function GradingPanel() {
+  const [loading, setLoading] = useState(false)
+  const [matches, setMatches] = useState<GradingMatch[]>([])
+  const [ungradedCount, setUngradedCount] = useState(0)
+  const [grading, setGrading] = useState<string | null>(null) // matchId đang chấm
+  const [gradeAllResult, setGradeAllResult] = useState<string | null>(null)
+  const [lastRefresh, setLastRefresh] = useState<string | null>(null)
+
+  async function loadStatus() {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/admin/grade")
+      const data = await res.json()
+      setMatches(data.matches ?? [])
+      setUngradedCount(data.ungradedMatches ?? 0)
+      setLastRefresh(new Date().toLocaleTimeString("vi-VN"))
+    } catch {
+      setMatches([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function gradeOne(matchId: string) {
+    setGrading(matchId)
+    setGradeAllResult(null)
+    try {
+      const res = await fetch("/api/admin/grade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matchId }),
+      })
+      const data = await res.json()
+      if (data.ok && data.result) {
+        setGradeAllResult(`✅ ${data.match}: ${data.result.wins} thắng, ${data.result.losses} thua, ${data.result.skipped} bỏ lỡ`)
+      } else {
+        setGradeAllResult(`❌ ${data.error ?? "Lỗi"}`)
+      }
+      await loadStatus()
+    } catch {
+      setGradeAllResult("❌ Lỗi kết nối")
+    } finally {
+      setGrading(null)
+    }
+  }
+
+  async function gradeAll() {
+    setGrading("all")
+    setGradeAllResult(null)
+    try {
+      const res = await fetch("/api/admin/grade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        if (data.gradedCount === 0) {
+          setGradeAllResult("✅ Tất cả trận đã được chấm điểm, không có gì mới.")
+        } else {
+          const lines = data.results.map((r: { match: string; wins: number; losses: number; skipped: number }) =>
+            `${r.match}: ${r.wins}W ${r.losses}L ${r.skipped}S`
+          )
+          setGradeAllResult(`✅ Đã chấm ${data.gradedCount} trận:\n${lines.join("\n")}`)
+        }
+      } else {
+        setGradeAllResult(`❌ ${data.error ?? "Lỗi"}`)
+      }
+      await loadStatus()
+    } catch {
+      setGradeAllResult("❌ Lỗi kết nối")
+    } finally {
+      setGrading(null)
+    }
+  }
+
+  // Auto-load on mount
+  useEffect(() => { loadStatus() }, [])
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-3xl p-5 space-y-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Trophy size={16} className="text-[#ffd700]" />
+            <h2 className="text-base font-bold text-white">Chấm điểm trận đấu</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            {lastRefresh && <span className="text-[10px] text-white/30">Cập nhật: {lastRefresh}</span>}
+            <button onClick={loadStatus} disabled={loading}
+              className="p-2 rounded-xl hover:bg-white/5 transition-colors disabled:opacity-50">
+              <RefreshCw size={14} className={cn("text-white/40", loading && "animate-spin")} />
+            </button>
+          </div>
+        </div>
+
+        {/* Summary */}
+        {matches.length > 0 && (
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold"
+              style={ungradedCount > 0
+                ? { background: "rgba(255,82,82,0.1)", color: "#ff5252", border: "1px solid rgba(255,82,82,0.2)" }
+                : { background: "rgba(0,230,118,0.1)", color: "#00e676", border: "1px solid rgba(0,230,118,0.2)" }
+              }>
+              {ungradedCount > 0 ? `⚠️ ${ungradedCount} trận chưa chấm xong` : "✅ Tất cả đã chấm"}
+            </div>
+            {ungradedCount > 0 && (
+              <button onClick={gradeAll} disabled={grading !== null}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                style={{ background: "rgba(255,215,0,0.15)", color: "#ffd700", border: "1px solid rgba(255,215,0,0.25)" }}>
+                {grading === "all" ? "Đang chấm..." : "Chấm tất cả"}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Grade all result */}
+        {gradeAllResult && (
+          <div className="rounded-xl p-3 text-xs font-mono whitespace-pre-wrap"
+            style={gradeAllResult.startsWith("✅")
+              ? { background: "rgba(0,230,118,0.06)", border: "1px solid rgba(0,230,118,0.15)", color: "#00e676" }
+              : { background: "rgba(255,82,82,0.06)", border: "1px solid rgba(255,82,82,0.15)", color: "#ff5252" }
+            }>
+            {gradeAllResult}
+          </div>
+        )}
+
+        {/* Match list */}
+        {loading && matches.length === 0 ? (
+          <div className="text-center py-8 text-white/30 text-sm">Đang tải...</div>
+        ) : matches.length === 0 ? (
+          <div className="text-center py-8 text-white/30 text-sm">Chưa có trận nào kết thúc</div>
+        ) : (
+          <div className="space-y-2">
+            {matches.map(m => (
+              <div key={m.matchId} className="rounded-2xl p-3 flex items-center gap-3"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-white">{m.match}</span>
+                    <span className="text-xs text-white/40">{m.score}</span>
+                    <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-bold",
+                      m.ungraded > 0 ? "bg-red-500/15 text-red-400" : "bg-green-500/15 text-green-400"
+                    )}>
+                      {m.ungraded > 0 ? `${m.ungraded} chưa chấm` : "Đã chấm"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 text-[10px] text-white/30">
+                    <span>{m.totalPredictions} dự đoán</span>
+                    <span className="text-green-400">{m.wins}W</span>
+                    <span className="text-red-400">{m.losses}L</span>
+                    <span className="text-white/20">{m.skips} skip</span>
+                    {m.groups.length > 0 && <span>Hội: {m.groups.join(", ")}</span>}
+                  </div>
+                </div>
+                {m.ungraded > 0 && (
+                  <button onClick={() => gradeOne(m.matchId)} disabled={grading !== null}
+                    className="px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all disabled:opacity-50 flex-shrink-0"
+                    style={{ background: "rgba(0,230,118,0.12)", color: "#00e676", border: "1px solid rgba(0,230,118,0.2)" }}>
+                    {grading === m.matchId ? "..." : "Chấm"}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
