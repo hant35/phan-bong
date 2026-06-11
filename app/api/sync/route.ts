@@ -3,9 +3,14 @@ import { prisma } from "@/lib/db"
 import { syncFootballData } from "@/lib/sync-sources"
 
 // ══════════════════════════════════════════════════════════════
-// GET /api/sync — Lightweight auto-sync endpoint
-// Client gọi mỗi 20s khi có trận live, 5 phút khi không có
+// GET /api/sync — Auto-sync với debounce
+// Dù 100 user gọi cùng lúc, chỉ gọi Football-Data 1 lần mỗi 15s
 // ══════════════════════════════════════════════════════════════
+
+// Module-level cache (shared across all requests trong cùng serverless instance)
+let lastSyncAt = 0
+let lastResult: { updated: number; details: string[]; errors: string[] } | null = null
+const DEBOUNCE_MS = 15_000 // Tối thiểu 15s giữa 2 lần gọi API thực
 
 export async function GET() {
   const fdKey = process.env.FOOTBALL_DATA_API_KEY
@@ -13,25 +18,45 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "No API key configured" }, { status: 500 })
   }
 
-  // Kiểm tra có trận live/scheduled sắp đá không
-  const now = new Date()
+  const now = Date.now()
   const liveCount = await prisma.match.count({ where: { status: "live" } })
   const soonCount = await prisma.match.count({
     where: {
       status: "scheduled",
-      kickoffAt: { lte: new Date(now.getTime() + 30 * 60 * 1000) }, // trong 30 phút tới
+      kickoffAt: { lte: new Date(now + 30 * 60 * 1000) },
     },
   })
 
-  // Suggest interval cho client: 20s khi có trận live/sắp đá, 300s khi idle
   const hasAction = liveCount > 0 || soonCount > 0
   const nextInterval = hasAction ? 20 : 300
 
+  // Debounce: nếu vừa sync trong 15s gần đây → trả kết quả cũ
+  if (lastResult && (now - lastSyncAt) < DEBOUNCE_MS) {
+    return NextResponse.json({
+      ok: true,
+      updated: 0, // không có gì mới (cached)
+      cached: true,
+      liveCount,
+      soonCount,
+      nextInterval,
+      lastSyncAgo: Math.round((now - lastSyncAt) / 1000),
+    })
+  }
+
+  // Gọi API thực sự
   try {
     const result = await syncFootballData(fdKey)
+    lastSyncAt = Date.now()
+    lastResult = {
+      updated: result.updated,
+      details: result.details,
+      errors: result.errors,
+    }
+
     return NextResponse.json({
       ok: true,
       updated: result.updated,
+      cached: false,
       liveCount,
       soonCount,
       nextInterval,
