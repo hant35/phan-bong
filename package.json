@@ -9,7 +9,7 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "local:schema": "node scripts/gen-local-schema.mjs",
-    "local:setup": "npm run local:schema && prisma generate --schema=prisma/schema.local.prisma && prisma db push --schema=prisma/schema.local.prisma --skip-generate && tsx prisma/seed.ts",
+    "local:setup": "npm run local:schema && prisma generate --schema=prisma/schema.local.prisma && prisma db push --schema=prisma/schema.local.prisma --skip-generate --force-reset --accept-data-loss && tsx prisma/seed.ts",
     "local:dev": "npm run local:schema && prisma generate --schema=prisma/schema.local.prisma && next dev",
     "local:build": "npm run local:schema && prisma generate --schema=prisma/schema.local.prisma && next build",
     "local:start": "next start"
