@@ -289,14 +289,14 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
             </div>
           ) : (
             <div className="rounded-3xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <div className="flex items-center justify-between px-3 pt-3 pb-2">
+              <div className="flex items-center justify-between px-4 pt-4 pb-2 md:px-4 md:pt-3 md:pb-2">
                 <div className="flex items-center gap-1.5">
                   <Zap size={13} className="text-[#00e676]" />
-                  <h3 className="font-bold text-white text-xs">Trận đấu</h3>
+                  <h3 className="font-bold text-white text-xs md:text-sm">Trận đấu</h3>
                 </div>
-                <Link href="/matches" className="text-[9px] text-white/30 hover:text-white/60">Xem tất cả →</Link>
+                <Link href="/matches" className="text-[9px] md:text-[10px] text-white/30 hover:text-white/60">Xem tất cả →</Link>
               </div>
-              <div className="divide-y divide-white/5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-2.5 px-3 pb-3 md:px-3 md:pb-3">
                 {upcomingMatches.map(match => {
                   const ps = getPickState(match.id, match)
                   const hasKeo = match.hasConfig && (
@@ -317,70 +317,108 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                   const underPct = ouTotal > 0 ? 100 - overPct : 50
 
                   return (
-                    <div key={match.id} className="px-3 py-2.5 space-y-2">
+                    <div key={match.id} className="rounded-xl px-3 py-3 space-y-2 md:px-2.5 md:py-2 md:space-y-1.5"
+                      style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
 
-                      {/* Match header + kèo inline */}
-                      <div className="flex items-center gap-1.5">
-                        <div className="relative w-7 h-[18px] rounded overflow-hidden flex-shrink-0">
+                      {/* Match header */}
+                      <div className="flex items-center gap-1.5 md:gap-1">
+                        <div className="relative w-7 h-[18px] md:w-6 md:h-4 rounded overflow-hidden flex-shrink-0">
                           <Image src={flagUrl(match.homeFlag)} alt="" fill className="object-cover" unoptimized />
                         </div>
-                        <span className="text-xs font-bold text-white truncate flex-1 min-w-0">{match.homeTeam}</span>
-                        <div className="text-center flex-shrink-0 px-0.5 min-w-[56px]">
+                        <span className="text-xs md:text-[11px] font-bold text-white truncate flex-1 min-w-0">{match.homeTeam}</span>
+                        <div className="text-center flex-shrink-0 px-0.5 min-w-[56px] md:min-w-[52px]">
                           {match.isLive ? (
                             <>
-                              <div className="text-sm font-black text-white leading-tight">{match.scoreHome ?? 0}–{match.scoreAway ?? 0}</div>
+                              <div className="text-sm md:text-xs font-black text-white leading-tight">{match.scoreHome ?? 0}–{match.scoreAway ?? 0}</div>
                               <div className="flex items-center justify-center gap-0.5">
-                                <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
-                                <span className="text-[8px] font-bold text-red-400">{match.minute ?? "?"}&apos;</span>
+                                <span className="w-1 h-1 md:w-1 md:h-1 rounded-full bg-red-500 animate-pulse" />
+                                <span className="text-[8px] md:text-[7px] font-bold text-red-400">{match.minute ?? "?"}&apos;</span>
                               </div>
                             </>
                           ) : (
-                            <div className="text-[9px] text-white/30 font-semibold leading-tight">
-                              {formatDateTimeParts(match.kickoffAt).time}
-                              <span className="text-white/20 mx-0.5">·</span>
-                              {formatDateTimeParts(match.kickoffAt).date}
-                            </div>
+                            <>
+                              <div className="text-[10px] md:hidden text-white/30 font-bold">VS</div>
+                              <div className="text-[9px] md:text-[8px] text-white/30 font-semibold leading-tight">
+                                {formatDateTimeParts(match.kickoffAt).time}
+                                <span className="text-white/20 mx-0.5">·</span>
+                                {formatDateTimeParts(match.kickoffAt).date}
+                              </div>
+                            </>
                           )}
                           <div className="flex items-center justify-center gap-0.5 flex-wrap mt-0.5">
                             {match.ahLine != null && (
-                              <span className="text-[8px] font-bold px-1 rounded"
+                              <span className="text-[8px] md:text-[7px] font-bold px-1 rounded"
                                 style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" }}>
-                                C {match.ahLine > 0 ? "+" : ""}{match.ahLine}
+                                <span className="md:hidden">Chấp </span>
+                                <span className="hidden md:inline">C </span>
+                                {match.ahLine > 0 ? "+" : ""}{match.ahLine}
                               </span>
                             )}
                             {match.ouLine != null && (
-                              <span className="text-[8px] font-bold px-1 rounded"
+                              <span className="text-[8px] md:text-[7px] font-bold px-1 rounded"
                                 style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" }}>
-                                T/X {match.ouLine}
+                                <span className="md:hidden">Tổng </span>
+                                <span className="hidden md:inline">T/X </span>
+                                {match.ouLine}
                               </span>
                             )}
                             {match.pointsMultiplier > 1 && (
-                              <span className="text-[8px] font-black px-1 rounded"
+                              <span className="text-[8px] md:text-[7px] font-black px-1 rounded"
                                 style={{ background: "rgba(255,215,0,0.2)", color: "#ffd700" }}>×{match.pointsMultiplier}</span>
                             )}
                             {match.blindMode && (
-                              <span className="text-[8px] px-1 rounded"
+                              <span className="text-[8px] md:text-[7px] px-1 rounded"
                                 style={{ background: "rgba(124,58,237,0.2)", color: "#a78bfa" }}>🙈</span>
                             )}
                           </div>
                         </div>
-                        <span className="text-xs font-bold text-white truncate flex-1 min-w-0 text-right">{match.awayTeam}</span>
-                        <div className="relative w-7 h-[18px] rounded overflow-hidden flex-shrink-0">
+                        <span className="text-xs md:text-[11px] font-bold text-white truncate flex-1 min-w-0 text-right">{match.awayTeam}</span>
+                        <div className="relative w-7 h-[18px] md:w-6 md:h-4 rounded overflow-hidden flex-shrink-0">
                           <Image src={flagUrl(match.awayFlag)} alt="" fill className="object-cover" unoptimized />
                         </div>
                       </div>
 
+                      {/* Kèo info — box đầy đủ trên mobile, badge inline trên PC (ở header) */}
+                      {(match.ahLine != null || match.ouLine != null) && (
+                        <div className="flex gap-2 md:hidden">
+                          {match.ahLine != null && (
+                            <div className="flex-1 px-2.5 py-1.5 rounded-lg text-center"
+                              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                              <div className="text-[9px] text-white/30 font-bold uppercase tracking-wide">Chấp</div>
+                              <div className="text-xs font-black text-white/80">
+                                {match.ahLine > 0 ? "+" : ""}{match.ahLine}
+                              </div>
+                            </div>
+                          )}
+                          {match.ouLine != null && (
+                            <div className="flex-1 px-2.5 py-1.5 rounded-lg text-center"
+                              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                              <div className="text-[9px] text-white/30 font-bold uppercase tracking-wide">Tổng bàn thắng</div>
+                              <div className="text-xs font-black text-white/80">{match.ouLine}</div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Tỉ lệ dự đoán */}
                       {(ahTotal > 0 || ouTotal > 0) && (
-                        <div className="space-y-1">
+                        <div className="space-y-1 md:space-y-0.5">
                           {ahTotal > 0 && (
                             <div>
-                              <div className="flex justify-between text-[8px] text-white/30 mb-px gap-1">
-                                <span className="truncate">{homePct}%</span>
-                                <span className="flex-shrink-0 text-white/20">Chấp · {ahTotal}</span>
-                                <span className="truncate text-right">{awayPct}%</span>
+                              <div className="flex justify-between text-[9px] md:text-[8px] text-white/30 mb-0.5 md:mb-px gap-1">
+                                <span className="truncate min-w-0">
+                                  <span className="md:hidden">{match.homeTeam} </span>{homePct}%
+                                </span>
+                                <span className="flex-shrink-0 text-center">
+                                  <span className="md:hidden">{ahTotal} người đoán kèo chấp</span>
+                                  <span className="hidden md:inline">Chấp · {ahTotal}</span>
+                                </span>
+                                <span className="truncate min-w-0 text-right">
+                                  <span className="md:hidden">{awayPct}% {match.awayTeam}</span>
+                                  <span className="hidden md:inline">{awayPct}%</span>
+                                </span>
                               </div>
-                              <div className="flex h-1 rounded-full overflow-hidden gap-px">
+                              <div className="flex h-1.5 md:h-1 rounded-full overflow-hidden gap-px">
                                 <div className="rounded-l-full transition-all" style={{ width: `${homePct}%`, background: "linear-gradient(90deg,#00e676,#00bcd4)" }} />
                                 <div className="rounded-r-full transition-all" style={{ width: `${awayPct}%`, background: "linear-gradient(90deg,#ff5252,#ff1744)" }} />
                               </div>
@@ -388,12 +426,15 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                           )}
                           {ouTotal > 0 && (
                             <div>
-                              <div className="flex justify-between text-[8px] text-white/30 mb-px gap-1">
+                              <div className="flex justify-between text-[9px] md:text-[8px] text-white/30 mb-0.5 md:mb-px gap-1">
                                 <span>Tài {overPct}%</span>
-                                <span className="flex-shrink-0 text-white/20">T/X · {ouTotal}</span>
-                                <span>Xỉu {underPct}%</span>
+                                <span className="flex-shrink-0 text-center">
+                                  <span className="md:hidden">{ouTotal} người đoán tổng bàn thắng</span>
+                                  <span className="hidden md:inline">T/X · {ouTotal}</span>
+                                </span>
+                                <span>{underPct}% Xỉu</span>
                               </div>
-                              <div className="flex h-1 rounded-full overflow-hidden gap-px">
+                              <div className="flex h-1.5 md:h-1 rounded-full overflow-hidden gap-px">
                                 <div className="rounded-l-full transition-all" style={{ width: `${overPct}%`, background: "linear-gradient(90deg,#ffd700,#ff8f00)" }} />
                                 <div className="rounded-r-full transition-all" style={{ width: `${underPct}%`, background: "linear-gradient(90deg,#7c3aed,#a78bfa)" }} />
                               </div>
@@ -404,71 +445,68 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
 
                       {/* Pick area */}
                       {!match.hasConfig ? (
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[9px] text-white/25 italic">Chưa mở kèo</span>
+                        <div className="flex items-center justify-between py-1">
+                          <span className="text-[10px] text-white/25 italic">Admin chưa mở kèo cho trận này</span>
                           {isGroupAdmin && (
                             <Link href={`/groups/${group.id}/admin`}
-                              className="text-[9px] font-bold px-1.5 py-0.5 rounded-md"
+                              className="text-[10px] font-bold px-2 py-1 rounded-lg"
                               style={{ background: "rgba(0,230,118,0.08)", color: "#00e676" }}>
                               Mở kèo
                             </Link>
                           )}
                         </div>
                       ) : match.isLive ? (
-                        <div className="text-[9px] text-white/30 text-center">Đang diễn ra — kèo khóa</div>
+                        <div className="text-[10px] text-white/30 text-center py-1">Trận đang diễn ra — kèo đã khóa</div>
                       ) : ps.done ? (
                         <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1 text-[11px] font-bold min-w-0" style={{ color: "#00e676" }}>
-                            <CheckCircle2 size={12} className="flex-shrink-0" />
+                          <div className="flex items-center gap-1.5 text-sm md:text-xs font-bold min-w-0" style={{ color: "#00e676" }}>
+                            <CheckCircle2 size={14} className="flex-shrink-0" />
                             <span className="truncate">Đã đoán: {sideLabel ?? (ps.betType === "exact" ? "Tỉ số" : "—")}</span>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <button onClick={() => setPickState(prev => ({ ...prev, [match.id]: { ...ps, done: false } }))}
-                              className="text-[10px] text-white/30 hover:text-white/60 transition-colors underline">
-                              Sửa
-                            </button>
-                            <Link href={`/matches/${match.id}?from=/groups/${group.id}`}
-                              className="text-[9px] text-white/30 hover:text-white/60">Chi tiết</Link>
-                          </div>
+                          <button onClick={() => setPickState(prev => ({ ...prev, [match.id]: { ...ps, done: false } }))}
+                            className="text-xs md:text-[10px] text-white/30 hover:text-white/60 transition-colors underline flex-shrink-0">
+                            Sửa
+                          </button>
                         </div>
                       ) : !hasKeo ? (
-                        <div className="text-[10px] text-white/40 text-center">Kèo chưa đủ thông tin</div>
+                        <div className="text-xs text-white/40 text-center py-1">Kèo chưa đủ thông tin</div>
                       ) : (
-                        <div className="space-y-1.5">
+                        <div className="space-y-2 md:space-y-1.5">
                           {match.allowedBetTypes.filter(t => t !== "exact").length > 1 && (
-                            <div className="flex gap-1">
-                              {[{ id: "ah", label: "Chấp" }, { id: "ou", label: "T/X" }]
+                            <div className="flex gap-1.5 md:gap-1">
+                              {[{ id: "ah", label: "Kèo chấp", short: "Chấp" }, { id: "ou", label: "Tổng bàn thắng", short: "T/X" }]
                                 .filter(bt => match.allowedBetTypes.includes(bt.id))
                                 .map(bt => (
                                   <button key={bt.id} onClick={() => setPick(match.id, "betType", bt.id)}
-                                    className={cn("flex-1 py-0.5 rounded-md text-[9px] font-bold transition-all",
+                                    className={cn("flex-1 py-1 md:py-0.5 rounded-lg text-[10px] md:text-[9px] font-bold transition-all",
                                       ps.betType === bt.id ? "text-[#0f1117]" : "text-white/40")}
                                     style={ps.betType === bt.id
                                       ? { background: "linear-gradient(135deg,#00e676,#00bcd4)" }
                                       : { background: "rgba(255,255,255,0.05)" }}>
-                                    {bt.label}
+                                    <span className="md:hidden">{bt.label}</span>
+                                    <span className="hidden md:inline">{bt.short}</span>
                                   </button>
                                 ))}
                             </div>
                           )}
 
                           {ps.betType === "ah" && match.ahLine != null && (
-                            <div className="flex gap-1.5">
+                            <div className="flex gap-2 md:gap-1">
                               {[
-                                { id: "home", label: match.homeTeam, sub: `C ${match.ahLine > 0 ? "+" : ""}${match.ahLine}`, flag: match.homeFlag },
-                                { id: "away", label: match.awayTeam, sub: "Nhận chấp", flag: match.awayFlag },
+                                { id: "home", label: match.homeTeam, sub: `chấp ${match.ahLine > 0 ? "+" : ""}${match.ahLine}`, flag: match.homeFlag },
+                                { id: "away", label: match.awayTeam, sub: "nhận chấp", flag: match.awayFlag },
                               ].map(opt => (
                                 <button key={opt.id} onClick={() => setPick(match.id, "side", opt.id)}
-                                  className={cn("flex-1 flex items-center gap-1.5 px-2 py-1.5 rounded-lg border transition-all min-w-0")}
+                                  className={cn("flex-1 flex items-center gap-2 md:gap-1 px-3 py-2.5 md:px-2 md:py-1.5 rounded-xl md:rounded-lg border transition-all")}
                                   style={ps.side === opt.id
                                     ? { background: "rgba(0,230,118,0.1)", borderColor: "rgba(0,230,118,0.35)" }
                                     : { background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.06)" }}>
-                                  <div className="relative w-5 h-3.5 rounded overflow-hidden flex-shrink-0">
+                                  <div className="relative w-7 h-5 md:w-5 md:h-3.5 rounded overflow-hidden flex-shrink-0">
                                     <Image src={flagUrl(opt.flag)} alt="" fill className="object-cover" unoptimized />
                                   </div>
                                   <div className="text-left min-w-0">
-                                    <div className={cn("text-[10px] font-bold truncate leading-tight", ps.side === opt.id ? "text-[#00e676]" : "text-white/70")}>{opt.label}</div>
-                                    <div className="text-[8px] text-white/30 truncate">{opt.sub}</div>
+                                    <div className={cn("text-xs md:text-[10px] font-bold truncate", ps.side === opt.id ? "text-[#00e676]" : "text-white/70")}>{opt.label}</div>
+                                    <div className="text-[9px] md:text-[8px] text-white/30">{opt.sub}</div>
                                   </div>
                                 </button>
                               ))}
@@ -476,27 +514,27 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                           )}
 
                           {ps.betType === "ou" && match.ouLine != null && (
-                            <div className="flex gap-1.5">
+                            <div className="flex gap-2 md:gap-1">
                               {[
-                                { id: "over", label: "Trên", sub: `> ${match.ouLine}`, color: "#00e676" },
-                                { id: "under", label: "Dưới", sub: `≤ ${match.ouLine}`, color: "#ff5252" },
+                                { id: "over", label: "Trên", sub: `> ${match.ouLine} bàn`, color: "#00e676" },
+                                { id: "under", label: "Dưới", sub: `≤ ${match.ouLine} bàn`, color: "#ff5252" },
                               ].map(opt => (
                                 <button key={opt.id} onClick={() => setPick(match.id, "side", opt.id)}
-                                  className="flex-1 py-1.5 rounded-lg border text-center transition-all"
+                                  className="flex-1 py-2.5 md:py-1.5 rounded-xl md:rounded-lg border text-center transition-all"
                                   style={ps.side === opt.id
                                     ? { background: `${opt.color}15`, borderColor: `${opt.color}40` }
                                     : { background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.06)" }}>
-                                  <div className={cn("text-[11px] font-black leading-tight", ps.side === opt.id ? "" : "text-white/60")}
+                                  <div className={cn("text-sm md:text-[11px] font-black leading-tight", ps.side === opt.id ? "" : "text-white/60")}
                                     style={ps.side === opt.id ? { color: opt.color } : {}}>{opt.label}</div>
-                                  <div className="text-[8px] text-white/30">{opt.sub}</div>
+                                  <div className="text-[9px] md:text-[8px] text-white/30">{opt.sub}</div>
                                 </button>
                               ))}
                             </div>
                           )}
 
-                          {ps.error && <p className="text-[10px] text-red-400">{ps.error}</p>}
+                          {ps.error && <p className="text-xs md:text-[10px] text-red-400 px-1">{ps.error}</p>}
 
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 md:gap-1">
                             <div className="flex-1 min-w-0">
                               <HopeStarPicker
                                 compact
@@ -506,17 +544,19 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                             </div>
                             <button onClick={() => submitPick(match)}
                               disabled={ps.submitting || !ps.side}
-                              className="flex-shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all disabled:opacity-40"
+                              className="flex-shrink-0 md:px-2.5 py-2 md:py-1.5 rounded-xl md:rounded-lg text-xs md:text-[10px] font-bold flex items-center justify-center gap-1 md:gap-0.5 transition-all disabled:opacity-40 flex-1 md:flex-none"
                               style={ps.side
                                 ? { background: "linear-gradient(135deg,#00e676,#00bcd4)", color: "#0f1117" }
                                 : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)" }}>
-                              {ps.submitting ? <Loader2 size={11} className="animate-spin"/> : <Zap size={11}/>}
-                              Gửi
+                              {ps.submitting ? <Loader2 size={13} className="md:w-3 md:h-3 animate-spin"/> : <Zap size={13} className="md:w-3 md:h-3"/>}
+                              <span className="md:hidden">Xác nhận</span>
+                              <span className="hidden md:inline">Gửi</span>
                             </button>
                             <Link href={`/matches/${match.id}?from=/groups/${group.id}`}
-                              className="flex-shrink-0 px-2 py-1.5 rounded-lg text-[9px] font-semibold text-white/40 hover:text-white/70 transition-colors"
+                              className="flex-shrink-0 px-3 py-2 md:px-2 md:py-1.5 rounded-xl md:rounded-lg text-[10px] md:text-[9px] font-semibold text-white/40 hover:text-white/70 transition-colors flex items-center"
                               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                              →
+                              <span className="md:hidden">Chi tiết</span>
+                              <span className="hidden md:inline">→</span>
                             </Link>
                           </div>
                         </div>
@@ -659,51 +699,53 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
       )}
 
       {tab === "matches" && (
-        <div className="space-y-1.5">
-          <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Trận cần đoán</p>
-          {upcomingMatches.map(match => {
-            const dt = formatDateTimeParts(match.kickoffAt)
-            return (
-              <Link key={match.id} href={`/matches/${match.id}`}>
-                <div className="rounded-xl px-3 py-2 flex items-center gap-2 hover:bg-white/5 transition-all"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <div className="relative w-6 h-4 rounded overflow-hidden flex-shrink-0">
-                    <Image src={flagUrl(match.homeFlag)} alt="" fill className="object-cover" unoptimized/>
-                  </div>
-                  <span className="text-xs font-bold text-white truncate flex-1 min-w-0">{match.homeTeam}</span>
-                  <div className="text-center flex-shrink-0 px-1">
-                    {match.isLive ? (
-                      <div className="text-[10px] font-black text-white">{match.scoreHome ?? 0}–{match.scoreAway ?? 0}</div>
-                    ) : (
-                      <div className="text-[9px] text-white/35 font-medium leading-tight">
-                        {dt.time}<span className="text-white/20 mx-0.5">·</span>{dt.date}
+        <div>
+          <p className="text-xs text-white/30 uppercase tracking-widest font-bold mb-3">Trận cần đoán</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-2.5">
+            {upcomingMatches.map(match => {
+              const dt = formatDateTimeParts(match.kickoffAt)
+              return (
+                <Link key={match.id} href={`/matches/${match.id}`}>
+                  <div className="rounded-xl md:rounded-lg px-3 py-2.5 md:px-2.5 md:py-2 flex items-center gap-2 md:gap-1.5 hover:bg-white/5 transition-all h-full"
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div className="relative w-6 h-4 md:w-5 md:h-3.5 rounded overflow-hidden flex-shrink-0">
+                      <Image src={flagUrl(match.homeFlag)} alt="" fill className="object-cover" unoptimized/>
+                    </div>
+                    <span className="text-xs md:text-[11px] font-bold text-white truncate flex-1 min-w-0">{match.homeTeam}</span>
+                    <div className="text-center flex-shrink-0 px-1">
+                      {match.isLive ? (
+                        <div className="text-[10px] md:text-[9px] font-black text-white">{match.scoreHome ?? 0}–{match.scoreAway ?? 0}</div>
+                      ) : (
+                        <div className="text-[9px] md:text-[8px] text-white/35 font-medium leading-tight">
+                          {dt.time}<span className="text-white/20 mx-0.5">·</span>{dt.date}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-center gap-0.5 mt-px flex-wrap">
+                        {match.ahLine != null && (
+                          <span className="text-[7px] md:text-[6px] font-bold px-0.5 rounded text-white/40">C{match.ahLine > 0 ? "+" : ""}{match.ahLine}</span>
+                        )}
+                        {match.ouLine != null && (
+                          <span className="text-[7px] md:text-[6px] font-bold px-0.5 rounded text-white/40">T/X{match.ouLine}</span>
+                        )}
+                        {match.pointsMultiplier > 1 && (
+                          <span className="text-[7px] md:text-[6px] font-black px-0.5 rounded" style={{ color: "#ffd700" }}>×{match.pointsMultiplier}</span>
+                        )}
                       </div>
-                    )}
-                    <div className="flex items-center justify-center gap-0.5 mt-px">
-                      {match.ahLine != null && (
-                        <span className="text-[7px] font-bold px-0.5 rounded text-white/40">C{match.ahLine > 0 ? "+" : ""}{match.ahLine}</span>
-                      )}
-                      {match.ouLine != null && (
-                        <span className="text-[7px] font-bold px-0.5 rounded text-white/40">T/X{match.ouLine}</span>
-                      )}
-                      {match.pointsMultiplier > 1 && (
-                        <span className="text-[7px] font-black px-0.5 rounded" style={{ color: "#ffd700" }}>×{match.pointsMultiplier}</span>
-                      )}
+                    </div>
+                    <span className="text-xs md:text-[11px] font-bold text-white truncate flex-1 min-w-0 text-right">{match.awayTeam}</span>
+                    <div className="relative w-6 h-4 md:w-5 md:h-3.5 rounded overflow-hidden flex-shrink-0">
+                      <Image src={flagUrl(match.awayFlag)} alt="" fill className="object-cover" unoptimized/>
+                    </div>
+                    <div className={cn("text-[9px] md:text-[8px] font-semibold px-1.5 py-0.5 md:px-1 md:py-px rounded-full flex-shrink-0",
+                      match.hasPick ? "text-[#00e676]" : "text-white/30"
+                    )} style={{ background: match.hasPick ? "rgba(0,230,118,0.1)" : "rgba(255,255,255,0.04)" }}>
+                      {match.hasPick ? "✓" : "—"}
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-white truncate flex-1 min-w-0 text-right">{match.awayTeam}</span>
-                  <div className="relative w-6 h-4 rounded overflow-hidden flex-shrink-0">
-                    <Image src={flagUrl(match.awayFlag)} alt="" fill className="object-cover" unoptimized/>
-                  </div>
-                  <div className={cn("text-[9px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0",
-                    match.hasPick ? "text-[#00e676]" : "text-white/30"
-                  )} style={{ background: match.hasPick ? "rgba(0,230,118,0.1)" : "rgba(255,255,255,0.04)" }}>
-                    {match.hasPick ? "✓" : "—"}
-                  </div>
-                </div>
-              </Link>
-            )
-          })}
+                </Link>
+              )
+            })}
+          </div>
         </div>
       )}
 
