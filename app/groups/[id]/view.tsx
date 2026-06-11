@@ -534,29 +534,26 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
 
                           {ps.error && <p className="text-xs md:text-[10px] text-red-400 px-1">{ps.error}</p>}
 
-                          <div className="flex items-center gap-1.5 md:gap-1">
-                            <div className="flex-1 min-w-0">
-                              <HopeStarPicker
-                                compact
-                                value={ps.confidence}
-                                onChange={star => setPick(match.id, "confidence", star)}
-                              />
-                            </div>
+                          <HopeStarPicker
+                            compact
+                            value={ps.confidence}
+                            onChange={star => setPick(match.id, "confidence", star)}
+                          />
+
+                          <div className="flex gap-2 md:gap-1.5">
                             <button onClick={() => submitPick(match)}
                               disabled={ps.submitting || !ps.side}
-                              className="flex-shrink-0 md:px-2.5 py-2 md:py-1.5 rounded-xl md:rounded-lg text-xs md:text-[10px] font-bold flex items-center justify-center gap-1 md:gap-0.5 transition-all disabled:opacity-40 flex-1 md:flex-none"
+                              className="flex-1 py-2 md:py-1.5 rounded-xl md:rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 md:gap-1 transition-all disabled:opacity-40"
                               style={ps.side
                                 ? { background: "linear-gradient(135deg,#00e676,#00bcd4)", color: "#0f1117" }
                                 : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)" }}>
                               {ps.submitting ? <Loader2 size={13} className="md:w-3 md:h-3 animate-spin"/> : <Zap size={13} className="md:w-3 md:h-3"/>}
-                              <span className="md:hidden">Xác nhận</span>
-                              <span className="hidden md:inline">Gửi</span>
+                              Xác nhận
                             </button>
                             <Link href={`/matches/${match.id}?from=/groups/${group.id}`}
-                              className="flex-shrink-0 px-3 py-2 md:px-2 md:py-1.5 rounded-xl md:rounded-lg text-[10px] md:text-[9px] font-semibold text-white/40 hover:text-white/70 transition-colors flex items-center"
+                              className="px-3 py-2 md:px-2.5 md:py-1.5 rounded-xl md:rounded-lg text-xs font-semibold text-white/40 hover:text-white/70 transition-colors flex items-center"
                               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                              <span className="md:hidden">Chi tiết</span>
-                              <span className="hidden md:inline">→</span>
+                              Chi tiết
                             </Link>
                           </div>
                         </div>
