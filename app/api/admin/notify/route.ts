@@ -21,16 +21,16 @@ export async function POST(req: NextRequest) {
     if (user.role !== "admin") return NextResponse.json({ error: "Không có quyền" }, { status: 403 })
     const result = await sendPushToAll(title.trim(), body.trim(), url || "/")
     if (!result.configured) {
-      return NextResponse.json({ error: "Chưa cấu hình VAPID keys trên server" }, { status: 503 })
+      return NextResponse.json({ error: `Chưa cấu hình VAPID keys trên server. ${result.debug ?? ""}`, ...result }, { status: 503 })
     }
     if (result.total === 0) {
-      return NextResponse.json({ error: "Chưa có thiết bị đăng ký nhận thông báo" }, { status: 400 })
+      return NextResponse.json({ error: "Chưa có thiết bị đăng ký nhận thông báo", ...result }, { status: 400 })
     }
     return NextResponse.json({
       ok: result.delivered > 0,
       ...result,
       error: result.delivered === 0
-        ? "Không gửi được thông báo. Kiểm tra VAPID keys (public/private cùng cặp; đổi NEXT_PUBLIC_VAPID_PUBLIC_KEY cần deploy lại)."
+        ? `Không gửi được. ${result.debug ?? ""}`
         : undefined,
     })
   }
