@@ -1,14 +1,19 @@
 import webpush from "web-push"
 import { prisma } from "./db"
+import { normalizeVapidKey } from "./vapid"
 
 function initVapid() {
   const { VAPID_EMAIL, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY } = process.env
-  if (!VAPID_EMAIL || !NEXT_PUBLIC_VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return false
+  if (!VAPID_EMAIL || !NEXT_PUBLIC_VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    console.warn("[push] Thiếu VAPID_EMAIL / NEXT_PUBLIC_VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY")
+    return false
+  }
   try {
-    webpush.setVapidDetails(VAPID_EMAIL, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
+    const publicKey = normalizeVapidKey(NEXT_PUBLIC_VAPID_PUBLIC_KEY)
+    const privateKey = normalizeVapidKey(VAPID_PRIVATE_KEY)
+    webpush.setVapidDetails(VAPID_EMAIL, publicKey, privateKey)
     return true
   } catch (err) {
-    // Key sai định dạng (không phải URL-safe Base64) — bỏ qua push thay vì crash
     console.warn("[push] VAPID keys không hợp lệ, bỏ qua gửi push:", (err as Error).message)
     return false
   }

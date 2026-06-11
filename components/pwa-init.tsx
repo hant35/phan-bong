@@ -32,7 +32,9 @@ export function PushToggle() {
       const existing = await reg.pushManager.getSubscription()
       if (existing) await existing.unsubscribe()
 
-      const rawKey = urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!)
+      const vapidPublicKey = normalizeVapidPublicKey(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!)
+      if (!vapidPublicKey) throw new Error("Thiếu NEXT_PUBLIC_VAPID_PUBLIC_KEY")
+      const rawKey = urlBase64ToUint8Array(vapidPublicKey)
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: rawKey.buffer.slice(rawKey.byteOffset, rawKey.byteOffset + rawKey.byteLength) as ArrayBuffer,
@@ -86,6 +88,10 @@ export function PushToggle() {
       {state === "granted" ? "Thông báo bật" : "Bật thông báo"}
     </button>
   )
+}
+
+function normalizeVapidPublicKey(key: string): string {
+  return key.trim().replace(/^["']|["']$/g, "").replace(/=+$/g, "").replace(/\+/g, "-").replace(/\//g, "_")
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
