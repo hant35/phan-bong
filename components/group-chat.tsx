@@ -50,7 +50,7 @@ export function GroupChat({ groupId, currentUserId }: { groupId: string; current
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
   const [showPicker, setShowPicker] = useState<false | "emoji" | "sticker">(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
@@ -67,7 +67,9 @@ export function GroupChat({ groupId, currentUserId }: { groupId: string; current
   }, [load])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight
+    }
   }, [messages.length])
 
   async function send(message?: string) {
@@ -116,7 +118,7 @@ export function GroupChat({ groupId, currentUserId }: { groupId: string; current
       </div>
 
       {/* Messages */}
-      <div className="overflow-y-auto hide-scrollbar px-4 py-3 space-y-0.5"
+      <div ref={containerRef} className="overflow-y-auto hide-scrollbar px-4 py-3 space-y-0.5"
         style={{ height: "min(380px, 48vh)" }}>
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-white/40 py-8">
@@ -167,7 +169,6 @@ export function GroupChat({ groupId, currentUserId }: { groupId: string; current
             )
           })
         )}
-        <div ref={bottomRef} />
       </div>
 
       {/* Emoji / Sticker picker */}
