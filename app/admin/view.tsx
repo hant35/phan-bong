@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Shield, Zap, Users, Trash2, Save, Check, X, UserMinus, ChevronDown, ChevronUp, Search, HelpCircle, Plus, RefreshCw, Database, CheckSquare, Square, AlertCircle, CheckCircle2, Bell, Send, BarChart2 } from "lucide-react"
+import { Shield, Zap, Users, Trash2, Save, Check, X, UserMinus, ChevronDown, ChevronUp, Search, HelpCircle, Plus, RefreshCw, Database, CheckSquare, Square, AlertCircle, CheckCircle2, Bell, Send, BarChart3 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagUrl, formatDateTimeParts } from "@/lib/format"
 
@@ -536,7 +536,7 @@ export function AdminView({
                         <button onClick={() => fetchGradingStatus(m.id)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-[#ffd700] hover:bg-[#ffd700]/10 border border-[#ffd700]/20 transition-colors"
                           title="Xem tình trạng tính điểm">
-                          <BarChart2 size={12} /> Xem điểm
+                          <BarChart3 size={12} /> Xem điểm
                         </button>
                       )}
                       <button onClick={() => deleteMatch(m.id, `${m.homeTeam} vs ${m.awayTeam}`)}
@@ -1402,7 +1402,7 @@ export function AdminView({
             onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <BarChart2 size={18} className="text-[#ffd700]" /> Tình trạng tính điểm
+                <BarChart3 size={18} className="text-[#ffd700]" /> Tình trạng tính điểm
               </h3>
               <button onClick={() => setGradingStatus(null)} className="p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white"><X size={20} /></button>
             </div>
