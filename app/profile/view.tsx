@@ -4,13 +4,13 @@ import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Settings, Award, TrendingUp, Target, Flame, Clock, ChevronRight, Sparkles, LogOut } from "lucide-react"
+import { Award, TrendingUp, Target, Clock, ChevronRight, Sparkles, LogOut, Pencil, Check, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagUrl } from "@/lib/format"
 import { PushToggle } from "@/components/pwa-init"
 
 interface Props {
-  user: { name: string; displayName: string | null; avatar: string; totalPoints: number; streak: number; createdAt: string; rank: number; total: number; correct: number }
+  user: { name: string; displayName: string | null; statusText: string | null; avatar: string; totalPoints: number; streak: number; createdAt: string; rank: number; total: number; correct: number }
   badges: { code: string; name: string; emoji: string; description: string; earned: boolean }[]
   statsByType: { type: string; correct: number; total: number; color: string; disabled?: boolean }[]
   recentPicks: { id: string; match: string; homeFlag: string; awayFlag: string; pickLabel: string; confidence: number; result: string; points: number; actualScore: string | null }[]
@@ -21,6 +21,43 @@ export function ProfileView({ user, badges, statsByType, recentPicks, rankContex
   const router = useRouter()
   const [tab, setTab] = useState<"overview" | "stats" | "badges" | "history">("overview")
   const winRate = user.total > 0 ? Math.round(user.correct / user.total * 100) : 0
+
+  // ── Edit state ──
+  const [editing, setEditing] = useState(false)
+  const [draftDisplayName, setDraftDisplayName] = useState(user.displayName ?? "")
+  const [draftStatus, setDraftStatus] = useState(user.statusText ?? "")
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  async function saveProfile() {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName: draftDisplayName, statusText: draftStatus }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        setSaveError(d.error ?? "Có lỗi xảy ra")
+        return
+      }
+      setEditing(false)
+      router.refresh()
+    } catch {
+      setSaveError("Lỗi kết nối")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function cancelEdit() {
+    setDraftDisplayName(user.displayName ?? "")
+    setDraftStatus(user.statusText ?? "")
+    setSaveError(null)
+    setEditing(false)
+  }
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" })
@@ -46,23 +83,76 @@ export function ProfileView({ user, badges, statsByType, recentPicks, rankContex
                 {user.avatar}
               </div>
               <div>
-                <h1 className="font-black text-white text-xl">{user.name}</h1>
-                {user.displayName && (
-                  <div className="inline-flex items-center gap-1 mt-1 rounded-full px-2 py-0.5"
+                <h1 className="font-black text-white text-xl leading-tight">{user.name}</h1>
+                {user.displayName && !editing && (
+                  <div className="inline-flex items-center gap-1 mt-0.5 rounded-full px-2 py-0.5"
                     style={{ background: "rgba(255,215,0,0.1)", border: "1px solid rgba(255,215,0,0.2)" }}>
                     <span className="text-xs font-bold" style={{ color: "#ffd700" }}>🌙 {user.displayName}</span>
                   </div>
                 )}
-                <p className="text-xs text-white/50 mt-1">Tham gia từ {new Date(user.createdAt).toLocaleDateString("vi-VN")}</p>
+                {user.statusText && !editing && (
+                  <p className="text-xs text-white/45 mt-1 italic leading-tight">💬 {user.statusText}</p>
+                )}
+                {!user.statusText && !user.displayName && !editing && (
+                  <p className="text-xs text-white/50 mt-1">Tham gia từ {new Date(user.createdAt).toLocaleDateString("vi-VN")}</p>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <PushToggle />
+              <button onClick={() => setEditing(e => !e)}
+                className="p-2 rounded-xl hover:bg-white/5 transition-colors"
+                title="Chỉnh sửa hồ sơ">
+                <Pencil size={16} className={editing ? "text-[#00e676]" : "text-white/30"} />
+              </button>
               <button onClick={logout} className="p-2 rounded-xl hover:bg-white/5 transition-colors" title="Đăng xuất">
-                <LogOut size={18} className="text-white/30" />
+                <LogOut size={16} className="text-white/30" />
               </button>
             </div>
           </div>
+
+          {/* Edit form */}
+          {editing && (
+            <div className="mb-4 rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div>
+                <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider block mb-1.5">Tên hiển thị</label>
+                <input
+                  value={draftDisplayName}
+                  onChange={e => setDraftDisplayName(e.target.value)}
+                  placeholder="Biệt danh / nickname..."
+                  maxLength={40}
+                  className="w-full rounded-xl px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:ring-1 focus:ring-[#00e676]/40"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider block mb-1.5">Status</label>
+                <input
+                  value={draftStatus}
+                  onChange={e => setDraftStatus(e.target.value)}
+                  placeholder="🔥 Đang hot streak... hoặc bất cứ điều gì"
+                  maxLength={80}
+                  className="w-full rounded-xl px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:ring-1 focus:ring-[#00e676]/40"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+                />
+                <div className="text-[10px] text-white/25 mt-1 text-right">{draftStatus.length}/80</div>
+              </div>
+              {saveError && <p className="text-xs text-red-400">{saveError}</p>}
+              <div className="flex gap-2">
+                <button onClick={saveProfile} disabled={saving}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold transition-all"
+                  style={{ background: "rgba(0,230,118,0.15)", color: "#00e676", border: "1px solid rgba(0,230,118,0.2)" }}>
+                  <Check size={14} />{saving ? "Đang lưu..." : "Lưu"}
+                </button>
+                <button onClick={cancelEdit}
+                  className="px-4 py-2 rounded-xl text-sm font-bold text-white/40 hover:text-white/60 transition-colors"
+                  style={{ background: "rgba(255,255,255,0.04)" }}>
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               { label: "Xu", value: user.totalPoints, gradient: "linear-gradient(135deg, #ffd700, #ff8f00)" },

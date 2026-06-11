@@ -14,6 +14,7 @@ model User {
   passwordHash String        @default("")
   name         String
   displayName  String?
+  statusText   String?
   avatar       String?
   role         String        @default("user")
   googleId     String?       @unique

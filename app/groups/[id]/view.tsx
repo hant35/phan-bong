@@ -25,7 +25,7 @@ const activityColors: Record<string, string> = {
 }
 
 interface Group { id: string; name: string; visibility: string; inviteCode: string; memberCount: number; myRank: number; myPoints: number; adminId: string }
-interface Member { rank: number; userId: string; name: string; displayName: string; avatar: string; streak: number; points: number; wins: number; losses: number; skipped: number; isMe: boolean; isAdmin: boolean; role: string }
+interface Member { rank: number; userId: string; name: string; displayName: string; statusText: string | null; avatar: string; streak: number; points: number; wins: number; losses: number; skipped: number; isMe: boolean; isAdmin: boolean; role: string }
 interface Activity { id: string; type: string; action: string; target: string; user: string; avatar: string; createdAt: string }
 interface UpcomingMatch {
   id: string; homeTeam: string; awayTeam: string; homeFlag: string; awayFlag: string
@@ -573,6 +573,9 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                         <span className="text-orange-400 text-[10px] flex items-center"><Flame size={9}/>{m.streak}</span>
                       )}
                     </div>
+                    {m.statusText && (
+                      <div className="text-[9px] text-white/35 truncate italic leading-tight">{m.statusText}</div>
+                    )}
                   </div>
                 </div>
                 {/* Đoán */}
@@ -678,6 +681,9 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                     {m.role === "owner" && <span className="flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(255,215,0,0.1)", color: "#ffd700" }}><Crown size={8}/>Chủ hội</span>}
                     {m.role === "admin" && <span className="flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(0,188,212,0.1)", color: "#00bcd4" }}><Shield size={8}/>Admin</span>}
                   </div>
+                  {m.statusText && (
+                    <div className="text-[10px] text-white/40 italic mt-0.5 truncate">💬 {m.statusText}</div>
+                  )}
                   {/* Stats bar giống EPL */}
                   <div className="flex items-center gap-1.5 mt-1">
                     <div className="flex items-center gap-0.5">

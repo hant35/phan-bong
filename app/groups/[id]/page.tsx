@@ -20,7 +20,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   const members = await prisma.groupMember.findMany({
     where: { groupId: id },
     orderBy: { points: "desc" },
-    include: { user: { select: { id: true, name: true, displayName: true, avatar: true, streak: true } } },
+    include: { user: { select: { id: true, name: true, displayName: true, statusText: true, avatar: true, streak: true } } },
   })
   const myIdx = members.findIndex(m => m.userId === user.id)
   const myRank = myIdx + 1
@@ -92,6 +92,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
     myRole={user.role === "admin" ? "owner" : (myMembership?.role ?? "member")}
     members={members.map((m, i) => ({
       rank: i + 1, userId: m.userId, name: m.user.name, displayName: m.user.displayName ?? "",
+      statusText: m.user.statusText ?? null,
       avatar: m.user.avatar ?? "??", streak: m.user.streak, points: m.points,
       wins: m.wins, losses: m.losses, skipped: m.skipped,
       isMe: user.id === m.userId, role: m.role,
