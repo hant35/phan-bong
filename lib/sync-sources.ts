@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db"
+import { gradeMatch } from "@/lib/grading"
 
 // ══════════════════════════════════════════════════════════════
 // Data source definitions
@@ -368,6 +369,18 @@ export async function syncFootballData(apiKey: string): Promise<SyncResult> {
         await prisma.match.update({ where: { id: local.id }, data: updates })
         result.updated++
         result.details.push(`${local.homeTeam} vs ${local.awayTeam}: ${Object.keys(updates).join(", ")}`)
+
+        // Auto-grade khi trận chuyển sang finished
+        if (updates.status === "finished" && local.status !== "finished") {
+          try {
+            const gr = await gradeMatch(local.id)
+            if (gr) {
+              result.details.push(`🏆 Đã chấm điểm ${local.homeTeam} vs ${local.awayTeam}: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
+            }
+          } catch (e) {
+            result.errors.push(`Lỗi chấm điểm ${local.homeTeam} vs ${local.awayTeam}: ${e instanceof Error ? e.message : String(e)}`)
+          }
+        }
       }
     }
   } catch (e: unknown) {
@@ -463,6 +476,18 @@ export async function syncOpenFootball(): Promise<SyncResult> {
         await prisma.match.update({ where: { id: local.id }, data: updates })
         result.updated++
         result.details.push(`${local.homeTeam} vs ${local.awayTeam}: ${Object.keys(updates).join(", ")}`)
+
+        // Auto-grade khi trận chuyển sang finished
+        if (updates.status === "finished" && local.status !== "finished") {
+          try {
+            const gr = await gradeMatch(local.id)
+            if (gr) {
+              result.details.push(`🏆 Đã chấm điểm ${local.homeTeam} vs ${local.awayTeam}: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
+            }
+          } catch (e) {
+            result.errors.push(`Lỗi chấm điểm ${local.homeTeam} vs ${local.awayTeam}: ${e instanceof Error ? e.message : String(e)}`)
+          }
+        }
       }
     }
   } catch (e: unknown) {
@@ -570,6 +595,18 @@ export async function syncApiFootball(apiKey: string): Promise<SyncResult> {
         await prisma.match.update({ where: { id: local.id }, data: updates })
         result.updated++
         result.details.push(`${local.homeTeam} vs ${local.awayTeam}: ${Object.keys(updates).join(", ")}`)
+
+        // Auto-grade khi trận chuyển sang finished
+        if (updates.status === "finished" && local.status !== "finished") {
+          try {
+            const gr = await gradeMatch(local.id)
+            if (gr) {
+              result.details.push(`🏆 Đã chấm điểm ${local.homeTeam} vs ${local.awayTeam}: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
+            }
+          } catch (e) {
+            result.errors.push(`Lỗi chấm điểm ${local.homeTeam} vs ${local.awayTeam}: ${e instanceof Error ? e.message : String(e)}`)
+          }
+        }
       }
     }
 

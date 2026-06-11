@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { sendPushToUser } from "@/lib/push"
+import { gradeMatch } from "@/lib/grading"
 
 // ══════════════════════════════════════════════════════════════
 // Cron Job — chạy mỗi 1 phút, tự động chuyển trạng thái trận đấu
@@ -70,9 +71,22 @@ export async function GET(req: NextRequest) {
   })
 
   for (const match of staleLive) {
-    // Chỉ auto-finish nếu đã có tỉ số
+    // Auto-finish nếu đã có tỉ số và live > 120p
     if (match.scoreHome != null && match.scoreAway != null) {
-      results.push(`⏰ ${match.homeTeam} vs ${match.awayTeam} — live > 120p, cần admin kết thúc thủ công`)
+      await prisma.match.update({
+        where: { id: match.id },
+        data: { status: "finished" },
+      })
+      results.push(`⏰ ${match.homeTeam} vs ${match.awayTeam} → FINISHED (auto, live > 120p)`)
+
+      try {
+        const gr = await gradeMatch(match.id)
+        if (gr) {
+          results.push(`🏆 Chấm điểm: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
+        }
+      } catch (e) {
+        results.push(`❌ Lỗi chấm điểm: ${e instanceof Error ? e.message : String(e)}`)
+      }
     }
   }
 
