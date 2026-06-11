@@ -77,8 +77,21 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
     statsMap[s.matchId][s.side!] = s._count.id
   }
 
+  // Số trận đã mở kèo trong hội
+  const totalConfiguredMatches = groupConfigs.length
+
+  // Số trận user đã đoán (gồm cả trận chưa kết thúc), không tính skip
+  const userPredCounts = await prisma.prediction.groupBy({
+    by: ["userId"],
+    where: { groupId: id, betType: { not: "skip" } },
+    _count: { id: true },
+  })
+  const predCountMap: Record<string, number> = {}
+  for (const p of userPredCounts) predCountMap[p.userId] = p._count.id
+  const myPredictedCount = predCountMap[user.id] ?? 0
+
   // Group stats
-  const totalPicks = await prisma.prediction.count({ where: { groupId: id } })
+  const totalPicks = await prisma.prediction.count({ where: { groupId: id, betType: { not: "skip" } } })
   const correctPicks = await prisma.prediction.count({ where: { groupId: id, result: "win" } })
   const totalResolved = await prisma.prediction.count({ where: { groupId: id, result: { in: ["win", "loss"] } } })
 
@@ -86,6 +99,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
     group={{
       id: group.id, name: group.name, visibility: group.visibility, inviteCode: group.inviteCode,
       memberCount: group._count.members, myRank, myPoints: myMembership?.points ?? 0,
+      myPredicted: myPredictedCount, totalConfiguredMatches,
       adminId: group.admin.id,
     }}
     currentUserId={user.id}
@@ -95,6 +109,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
       statusText: m.user.statusText ?? null,
       avatar: m.user.avatar ?? "??", streak: m.user.streak, points: m.points,
       wins: m.wins, losses: m.losses, skipped: m.skipped,
+      predicted: predCountMap[m.userId] ?? 0,
       isMe: user.id === m.userId, role: m.role,
       isAdmin: m.role === "owner" || m.role === "admin",
     }))}

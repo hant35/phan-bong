@@ -24,8 +24,15 @@ const activityColors: Record<string, string> = {
   loss: "#ff5252", comment: "#7c3aed", rank: "#00e676",
 }
 
-interface Group { id: string; name: string; visibility: string; inviteCode: string; memberCount: number; myRank: number; myPoints: number; adminId: string }
-interface Member { rank: number; userId: string; name: string; displayName: string; statusText: string | null; avatar: string; streak: number; points: number; wins: number; losses: number; skipped: number; isMe: boolean; isAdmin: boolean; role: string }
+interface Group {
+  id: string; name: string; visibility: string; inviteCode: string; memberCount: number
+  myRank: number; myPoints: number; myPredicted: number; totalConfiguredMatches: number; adminId: string
+}
+interface Member {
+  rank: number; userId: string; name: string; displayName: string; statusText: string | null
+  avatar: string; streak: number; points: number; wins: number; losses: number; skipped: number
+  predicted: number; isMe: boolean; isAdmin: boolean; role: string
+}
 interface Activity { id: string; type: string; action: string; target: string; user: string; avatar: string; createdAt: string }
 interface UpcomingMatch {
   id: string; homeTeam: string; awayTeam: string; homeFlag: string; awayFlag: string
@@ -188,10 +195,17 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
             {[
               { label: "Xu của tôi", value: group.myPoints, color: "#ffd700" },
               { label: "Xếp hạng", value: `#${group.myRank}`, color: "#00e676" },
+              {
+                label: "Đã đoán",
+                value: group.totalConfiguredMatches > 0
+                  ? `${group.myPredicted}/${group.totalConfiguredMatches}`
+                  : group.myPredicted,
+                color: "#ec4899",
+              },
               { label: "Thành viên", value: group.memberCount, color: "#00bcd4" },
             ].map(({ label, value, color }) => (
               <div key={label} className="rounded-2xl p-3 text-center" style={{ background: "rgba(255,255,255,0.04)" }}>
@@ -550,7 +564,6 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
           </div>
           {/* Rows */}
           {members.map((m, i) => {
-            const played = m.wins + m.losses + m.skipped
             return (
               <div key={m.userId}
                 className={cn("flex items-center px-3 py-2.5 transition-colors", i < members.length - 1 ? "border-b border-white/5" : "")}
@@ -591,7 +604,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                   </div>
                 </div>
                 {/* Đoán */}
-                <div className="w-8 sm:w-10 text-center text-[11px] sm:text-xs font-semibold text-white/40">{played}</div>
+                <div className="w-8 sm:w-10 text-center text-[11px] sm:text-xs font-semibold text-white/40">{m.predicted}</div>
                 {/* Đúng */}
                 <div className="w-8 sm:w-10 text-center text-[11px] sm:text-xs font-bold" style={{ color: "#00e676" }}>{m.wins}</div>
                 {/* Sai */}
@@ -680,8 +693,8 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
             )}
           </div>
           {members.map((m, i) => {
-            const played = m.wins + m.losses + m.skipped
-            const winRate = played > 0 ? Math.round(m.wins / played * 100) : 0
+            const resolved = m.wins + m.losses + m.skipped
+            const winRate = resolved > 0 ? Math.round(m.wins / resolved * 100) : 0
             return (
               <div key={m.userId} className="rounded-2xl p-3 flex items-center gap-3"
                 style={{ background: m.isMe ? "rgba(0,230,118,0.05)" : "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
@@ -700,7 +713,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                   <div className="flex items-center gap-1.5 mt-1">
                     <div className="flex items-center gap-0.5">
                       <span className="text-[10px] text-white/30">Đoán</span>
-                      <span className="text-[10px] font-bold text-white/50">{played}</span>
+                      <span className="text-[10px] font-bold text-white/50">{m.predicted}</span>
                     </div>
                     <div className="flex items-center gap-0.5">
                       <span className="text-[10px]" style={{ color: "rgba(0,230,118,0.5)" }}>Đúng</span>
