@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
+import { getGroupPointsMap } from "@/lib/group-points"
 import { GroupDetailView } from "./view"
 
 export default async function GroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -17,14 +18,21 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   })
   if (!group) notFound()
 
-  const members = await prisma.groupMember.findMany({
-    where: { groupId: id },
-    orderBy: { points: "desc" },
-    include: { user: { select: { id: true, name: true, displayName: true, statusText: true, avatar: true, streak: true } } },
-  })
-  const myIdx = members.findIndex(m => m.userId === user.id)
-  const myRank = myIdx + 1
-  const myMembership = members[myIdx]
+  const [members, groupPointsMap] = await Promise.all([
+    prisma.groupMember.findMany({
+      where: { groupId: id },
+      include: { user: { select: { id: true, name: true, displayName: true, statusText: true, avatar: true, streak: true } } },
+    }),
+    getGroupPointsMap(id),
+  ])
+
+  const rankedMembers = [...members].sort(
+    (a, b) => (groupPointsMap[b.userId] ?? 0) - (groupPointsMap[a.userId] ?? 0),
+  )
+  const myIdx = rankedMembers.findIndex(m => m.userId === user.id)
+  const myRank = myIdx >= 0 ? myIdx + 1 : members.length + 1
+  const myMembership = members.find(m => m.userId === user.id)
+  const myGroupPoints = groupPointsMap[user.id] ?? 0
 
   const activities = await prisma.activity.findMany({
     where: { groupId: id },
@@ -98,16 +106,16 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   return <GroupDetailView
     group={{
       id: group.id, name: group.name, visibility: group.visibility, inviteCode: group.inviteCode,
-      memberCount: group._count.members, myRank, myPoints: myMembership?.points ?? 0,
+      memberCount: group._count.members, myRank, myPoints: myGroupPoints,
       myPredicted: myPredictedCount, totalConfiguredMatches,
       adminId: group.admin.id,
     }}
     currentUserId={user.id}
     myRole={user.role === "admin" ? "owner" : (myMembership?.role ?? "member")}
-    members={members.map((m, i) => ({
+    members={rankedMembers.map((m, i) => ({
       rank: i + 1, userId: m.userId, name: m.user.name, displayName: m.user.displayName ?? "",
       statusText: m.user.statusText ?? null,
-      avatar: m.user.avatar ?? "??", streak: m.user.streak, points: m.points,
+      avatar: m.user.avatar ?? "??", streak: m.user.streak, points: groupPointsMap[m.userId] ?? 0,
       wins: m.wins, losses: m.losses, skipped: m.skipped,
       predicted: predCountMap[m.userId] ?? 0,
       isMe: user.id === m.userId, role: m.role,
@@ -152,10 +160,10 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
       winRate: totalResolved > 0 ? Math.round(correctPicks / totalResolved * 100) : 0,
       activityPerDay: Math.round(activities.length / 7),
     }}
-    champion={members[0] ? {
-      name: members[0].user.name, displayName: members[0].user.displayName ?? "",
-      avatar: members[0].user.avatar ?? "??", points: members[0].points,
-      correct: 0, total: 0, streak: members[0].user.streak,
+    champion={rankedMembers[0] ? {
+      name: rankedMembers[0].user.name, displayName: rankedMembers[0].user.displayName ?? "",
+      avatar: rankedMembers[0].user.avatar ?? "??", points: groupPointsMap[rankedMembers[0].userId] ?? 0,
+      correct: 0, total: 0, streak: rankedMembers[0].user.streak,
     } : null}
   />
 }

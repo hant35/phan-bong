@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db"
+import { syncGroupMemberPoints } from "@/lib/group-points"
 import { clampPoints, hopeStarDelta } from "@/lib/hope-star"
 
 // ══════════════════════════════════════════════════════════════
@@ -307,6 +308,16 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
         data: { streak: 0 },
       })
     }
+  }
+
+  // Đồng bộ xu trong hội từ tổng prediction (nguồn đúng)
+  const syncTargets = new Map<string, Set<string>>()
+  for (const pred of predictions) {
+    if (!syncTargets.has(pred.groupId)) syncTargets.set(pred.groupId, new Set())
+    syncTargets.get(pred.groupId)!.add(pred.userId)
+  }
+  for (const [groupId, userIds] of syncTargets) {
+    await syncGroupMemberPoints(groupId, [...userIds])
   }
 
   return {

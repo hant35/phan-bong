@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     select: { userId: true },
   })
 
-  await prisma.groupMember.create({ data: { userId: user.id, groupId: group.id, points: user.totalPoints } })
+  await prisma.groupMember.create({ data: { userId: user.id, groupId: group.id, points: 0 } })
   await prisma.activity.create({
     data: { userId: user.id, groupId: group.id, type: "join", action: "vừa tham gia hội", target: group.name },
   })
