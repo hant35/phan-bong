@@ -111,7 +111,12 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const typeLabels: Record<string, string> = { ah: "kèo chấp", ou: "tổng bàn thắng", exact: "tỉ số" }
   const typesLabel = types.map(t => typeLabels[t]).join(", ")
+  const lineDetails = [
+    ahLine != null ? `chấp ${ahLine}` : null,
+    ouLine != null ? `O/U ${ouLine}` : null,
+  ].filter(Boolean).join(", ")
   const extras = [
+    lineDetails || null,
     multiplier > 1 ? `×${multiplier} điểm` : null,
     lock > 0 ? `khóa sớm ${lock}p` : null,
     blind ? "blind mode" : null,
@@ -122,7 +127,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       userId: user.id,
       groupId,
       type: "config",
-      action: `đã cập nhật kèo (${typesLabel}${extras ? ` · ${extras}` : ""}) cho`,
+      action: `đã mở kèo (${typesLabel}${extras ? ` · ${extras}` : ""}) cho trận`,
       target: `${match.homeTeam} vs ${match.awayTeam}`,
     },
   })

@@ -117,24 +117,51 @@ export async function POST(req: NextRequest) {
   })
 
   if (isNew) {
-    const pickLabel =
-      betType === "exact" ? `${homeScore}–${awayScore}`
-      : betType === "ou" ? (side === "over" ? "Trên" : "Dưới")
-      : side === "home" ? match.homeTeam : match.awayTeam
     const matchLabel = `${match.homeTeam} vs ${match.awayTeam}`
+
+    // Mô tả chi tiết cho activity & push
+    let pickDetail: string
+    let pushDetail: string
+    if (betType === "exact") {
+      pickDetail = `đã đoán tỉ số ${match.homeTeam} ${homeScore}–${awayScore} ${match.awayTeam} cho trận`
+      pushDetail = `Tỉ số ${homeScore}–${awayScore} cho trận ${matchLabel}`
+    } else if (betType === "ou") {
+      const line = effectiveOuLine ?? match.ouLine
+      const sideLabel = side === "over" ? "trên" : "dưới"
+      pickDetail = `đã đoán tổng bàn thắng ${sideLabel} ${line ?? "?"} bàn cho trận`
+      pushDetail = `Tổng bàn thắng ${sideLabel} ${line ?? "?"} cho trận ${matchLabel}`
+    } else {
+      // ah
+      const line = effectiveAhLine ?? match.ahLine
+      const pickedTeam = side === "home" ? match.homeTeam : match.awayTeam
+      const otherTeam = side === "home" ? match.awayTeam : match.homeTeam
+      const lineStr = line != null ? ` (${match.homeTeam} chấp ${match.awayTeam} ${Math.abs(line)} trái)` : ""
+      pickDetail = `đã đoán ${pickedTeam} thắng cho trận`
+      pushDetail = `${pickedTeam} thắng${lineStr} — trận ${matchLabel}`
+      if (lineStr) pickDetail += "" // line info goes in meta
+    }
 
     const group = await prisma.group.findUnique({
       where: { id: groupId },
       include: { members: { select: { userId: true } } },
     })
     if (group) {
+      // Build meta for extra detail (kèo line)
+      const meta: Record<string, unknown> = { betType, side, homeScore, awayScore }
+      if (betType === "ah") {
+        meta.ahLine = effectiveAhLine ?? match.ahLine
+      } else if (betType === "ou") {
+        meta.ouLine = effectiveOuLine ?? match.ouLine
+      }
+
       await prisma.activity.create({
         data: {
           userId: user.id,
           groupId,
           type: "pick",
-          action: `đã đoán ${pickLabel} cho`,
+          action: pickDetail,
           target: matchLabel,
+          meta: JSON.stringify(meta),
         },
       })
 
@@ -143,7 +170,7 @@ export async function POST(req: NextRequest) {
         others.map(m => sendPushToUser(
           m.userId,
           `🎯 ${user.name} vừa đặt kèo!`,
-          `${pickLabel} cho trận ${matchLabel}`,
+          pushDetail,
           `/groups/${groupId}`,
         ))
       )
