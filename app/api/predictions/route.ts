@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
+import { clampHopeStar, DEFAULT_HOPE_STAR } from "@/lib/hope-star"
 import { getCurrentUser } from "@/lib/auth"
 import { sendPushToUser } from "@/lib/push"
 
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const conf = Math.max(1, Math.min(5, Math.round(confidence ?? 3)))
+  const conf = clampHopeStar(confidence ?? DEFAULT_HOPE_STAR)
 
   const existing = await prisma.prediction.findUnique({
     where: { userId_matchId_groupId: { userId: user.id, matchId, groupId } },

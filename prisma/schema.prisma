@@ -146,7 +146,7 @@ model Prediction {
   side       String?
   homeScore  Int?
   awayScore  Int?
-  confidence Int      @default(3)
+  confidence Int      @default(1)
   result     String?
   points     Int      @default(0)
   createdAt  DateTime @default(now())

@@ -10,7 +10,7 @@ import { MatchChatBar } from "@/components/match-chat"
 import { useToast } from "@/components/toast"
 import { HopeStarPicker } from "@/components/hope-star-picker"
 import { cn } from "@/lib/utils"
-import { hopeStarLabel } from "@/lib/hope-star"
+import { DEFAULT_HOPE_STAR, hopeStarLabel } from "@/lib/hope-star"
 import { flagUrl, formatDateTimeParts } from "@/lib/format"
 
 const BET_TYPES = [
@@ -58,7 +58,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup,
   const [pick, setPick] = useState<string | null>(match.myPick?.side ?? null)
   const [homeScore, setHomeScore] = useState(match.myPick?.homeScore ?? 1)
   const [awayScore, setAwayScore] = useState(match.myPick?.awayScore ?? 0)
-  const [confidence, setConfidence] = useState(match.myPick?.confidence ?? 1)
+  const [confidence, setConfidence] = useState(match.myPick?.confidence ?? DEFAULT_HOPE_STAR)
   const [submitted, setSubmitted] = useState(!!match.myPick)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -70,7 +70,10 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup,
     setSubmitting(true)
     setError(null)
     try {
-      const body: Record<string, unknown> = { matchId: match.id, groupId: selectedGroupId, betType, confidence }
+      const body: Record<string, unknown> = {
+        matchId: match.id, groupId: selectedGroupId, betType,
+        confidence: confidence || DEFAULT_HOPE_STAR,
+      }
       if (betType === "exact") { body.homeScore = homeScore; body.awayScore = awayScore }
       else body.side = pick
       const res = await fetch("/api/predictions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })

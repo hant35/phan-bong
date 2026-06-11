@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import { flagUrl, formatDateTimeParts, timeAgo } from "@/lib/format"
 import { GroupChat } from "@/components/group-chat"
 import { HopeStarPicker } from "@/components/hope-star-picker"
+import { DEFAULT_HOPE_STAR } from "@/lib/hope-star"
 
 const avatarGradients = [
   "linear-gradient(135deg, #ffd700, #ff8f00)",
@@ -68,7 +69,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
     return pickState[matchId] ?? {
       betType: match.myPick?.betType ?? defaultBetType,
       side: match.myPick?.side ?? null,
-      confidence: match.myPick?.confidence ?? 1,
+      confidence: match.myPick?.confidence ?? DEFAULT_HOPE_STAR,
       submitting: false,
       done: match.hasPick,
       error: null,
@@ -91,7 +92,10 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
       const res = await fetch("/api/predictions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matchId: match.id, groupId: group.id, betType: ps.betType, side: ps.side, confidence: ps.confidence }),
+        body: JSON.stringify({
+          matchId: match.id, groupId: group.id, betType: ps.betType, side: ps.side,
+          confidence: ps.confidence ?? 1,
+        }),
       })
       const data = await res.json()
       if (!res.ok) {

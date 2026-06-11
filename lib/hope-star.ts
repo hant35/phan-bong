@@ -3,6 +3,7 @@
 // ══════════════════════════════════════════════════════════════
 
 export const INITIAL_USER_POINTS = 100
+export const DEFAULT_HOPE_STAR = 1
 
 /** index 1..5 → xu thưởng khi thắng */
 export const HOPE_STAR_WIN = [0, 1, 2, 3, 4, 5] as const
