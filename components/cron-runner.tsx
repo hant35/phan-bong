@@ -1,22 +1,54 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 
-// Chạy cron job mỗi 60 giây để tự động chuyển trạng thái trận đấu
-// Component này mount 1 lần ở layout, không render gì
+// ══════════════════════════════════════════════════════════════
+// CronRunner — poll /api/sync mỗi 20s (có trận live) hoặc 5 phút (idle)
+// Tự động cập nhật tỉ số, trạng thái, chấm điểm, gửi push
+// Refresh UI khi có thay đổi
+// ══════════════════════════════════════════════════════════════
 
 export function CronRunner() {
+  const router = useRouter()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
-    // Chạy ngay khi mount
-    fetch("/api/cron").catch(() => {})
+    let mounted = true
 
-    // Lặp lại mỗi 60 giây
-    const interval = setInterval(() => {
-      fetch("/api/cron").catch(() => {})
-    }, 60_000)
+    async function tick() {
+      if (!mounted) return
 
-    return () => clearInterval(interval)
-  }, [])
+      let nextDelay = 300_000 // default 5 phút
+
+      try {
+        const res = await fetch("/api/sync")
+        if (res.ok) {
+          const data = await res.json()
+          // Server trả về interval gợi ý (giây)
+          nextDelay = (data.nextInterval ?? 300) * 1000
+          // Refresh UI nếu có thay đổi tỉ số/trạng thái
+          if (data.updated > 0) {
+            router.refresh()
+          }
+        }
+      } catch {
+        // Silent — retry next cycle
+      }
+
+      if (mounted) {
+        timerRef.current = setTimeout(tick, nextDelay)
+      }
+    }
+
+    // Bắt đầu sau 3s (không block page load)
+    timerRef.current = setTimeout(tick, 3_000)
+
+    return () => {
+      mounted = false
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [router])
 
   return null
 }
