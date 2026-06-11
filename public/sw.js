@@ -1,4 +1,4 @@
-const CACHE = "phanbong-v2"
+const CACHE = "phanbong-v3"
 const PRECACHE = ["/", "/matches", "/leaderboard", "/offline"]
 
 self.addEventListener("install", e => {
@@ -42,21 +42,29 @@ self.addEventListener("fetch", e => {
 
 // ── Push Notifications ──
 self.addEventListener("push", e => {
+  console.log("[SW] Push received!", e.data ? e.data.text() : "no data")
+
   let data = { title: "Phán Bóng ⚽", body: "Có thông báo mới!", url: "/" }
   if (e.data) {
-    try { data = { ...data, ...JSON.parse(e.data.text()) } } catch {}
+    try {
+      const parsed = JSON.parse(e.data.text())
+      data = { ...data, ...parsed }
+    } catch (err) {
+      console.error("[SW] Failed to parse push data:", err)
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: "/icons/icon-192.png",
+    badge: "/icons/badge-72.png",
+    data: { url: data.url },
+    vibrate: [200, 100, 200],
   }
 
   e.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: "/icons/icon-192.png",
-      badge: "/icons/badge-72.png",
-      data: { url: data.url },
-      vibrate: [200, 100, 200],
-      tag: "phanbong-notification",
-      renotify: true,
-    })
+    self.registration.showNotification(data.title, options)
+      .catch(err => console.error("[SW] showNotification failed:", err))
   )
 })
 
