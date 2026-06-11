@@ -17,6 +17,18 @@ export default async function HomePage() {
   const user = await getCurrentUser()
   if (!user) redirect("/login")
 
+  const myGroupMemberships = await prisma.groupMember.findMany({
+    where: { userId: user.id },
+    select: { groupId: true },
+    orderBy: { joinedAt: "asc" },
+  })
+  if (myGroupMemberships.length === 1) {
+    redirect(`/groups/${myGroupMemberships[0].groupId}`)
+  }
+  if (myGroupMemberships.length >= 2) {
+    redirect("/groups")
+  }
+
   const matches = await prisma.match.findMany({
     orderBy: { kickoffAt: "asc" },
     include: { predictions: { where: { userId: user.id } } },
@@ -40,7 +52,6 @@ export default async function HomePage() {
     include: { group: { include: { _count: { select: { members: true } } } } },
   })
 
-  // Build my groups with ranks
   const myGroupsWithRank = await Promise.all(myGroups.map(async m => {
     const all = await prisma.groupMember.findMany({ where: { groupId: m.groupId }, orderBy: { points: "desc" } })
     return {
@@ -61,27 +72,22 @@ export default async function HomePage() {
   const hm = nextMatch ? { flag: nextMatch.homeFlag, color: nextMatch.homeColor } : null
   const am = nextMatch ? { flag: nextMatch.awayFlag, color: nextMatch.awayColor } : null
 
-  const hasGroup = myGroups.length > 0
-
   return (
     <div className="flex flex-col gap-8">
-      {/* Banner nhắc vào hội nếu chưa có */}
-      {!hasGroup && (
-        <Link href="/groups">
-          <div className="rounded-2xl p-4 flex items-center gap-4 hover:scale-[1.01] transition-transform"
-            style={{ background: "linear-gradient(135deg, rgba(255,152,0,0.12), rgba(255,87,34,0.08))", border: "1px solid rgba(255,152,0,0.25)" }}>
-            <div className="text-3xl flex-shrink-0">🏟️</div>
-            <div className="flex-1 min-w-0">
-              <p className="font-black text-white text-sm">Bạn chưa vào hội nào!</p>
-              <p className="text-xs text-white/40 mt-0.5">Vào hội để dự đoán và ganh đua với bạn bè. Tạo hội mới hoặc nhập mã mời.</p>
-            </div>
-            <div className="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg"
-              style={{ background: "rgba(255,152,0,0.2)", color: "#ff9800" }}>
-              Vào hội →
-            </div>
+      <Link href="/groups">
+        <div className="rounded-2xl p-4 flex items-center gap-4 hover:scale-[1.01] transition-transform"
+          style={{ background: "linear-gradient(135deg, rgba(255,152,0,0.12), rgba(255,87,34,0.08))", border: "1px solid rgba(255,152,0,0.25)" }}>
+          <div className="text-3xl flex-shrink-0">🏟️</div>
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-white text-sm">Bạn chưa vào hội nào!</p>
+            <p className="text-xs text-white/40 mt-0.5">Vào hội để dự đoán và ganh đua với bạn bè. Tạo hội mới hoặc nhập mã mời.</p>
           </div>
-        </Link>
-      )}
+          <div className="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg"
+            style={{ background: "rgba(255,152,0,0.2)", color: "#ff9800" }}>
+            Vào hội →
+          </div>
+        </div>
+      </Link>
 
       <div className="flex items-center justify-between">
         <div>
