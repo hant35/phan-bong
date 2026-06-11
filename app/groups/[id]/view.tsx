@@ -31,6 +31,9 @@ interface UpcomingMatch {
   id: string; homeTeam: string; awayTeam: string; homeFlag: string; awayFlag: string
   kickoffAt: string; ahLine: number | null; ouLine: number | null; allowedBetTypes: string[]
   pointsMultiplier: number; blindMode: boolean; hasPick: boolean
+  isLive: boolean; scoreHome: number | null; scoreAway: number | null; minute: number | null
+  hasConfig: boolean
+  predStats: { homeCount: number; awayCount: number; overCount: number; underCount: number }
   myPick: { betType: string; side: string | null; homeScore: number | null; awayScore: number | null } | null
 }
 
@@ -245,63 +248,75 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
             ))}
           </div>
 
-          {/* Trận sắp tới – đoán inline */}
-          {upcomingMatches.length === 0 && (
+          {/* Trận đang diễn ra + sắp tới */}
+          {upcomingMatches.length === 0 ? (
             <div className="rounded-3xl px-5 py-8 text-center space-y-2"
               style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)" }}>
-              <div className="text-2xl">⚙️</div>
-              <p className="text-sm font-bold text-white/40">Admin hội chưa mở kèo cho trận nào</p>
-              {isGroupAdmin
-                ? <Link href={`/groups/${group.id}/admin`} className="inline-block mt-1 text-xs font-bold px-3 py-1.5 rounded-xl"
-                    style={{ background: "rgba(0,230,118,0.1)", color: "#00e676", border: "1px solid rgba(0,230,118,0.2)" }}>
-                    Vào trang Quản trị để mở kèo →
-                  </Link>
-                : <p className="text-xs text-white/25">Liên hệ admin hội để cấu hình kèo cho các trận sắp tới</p>
-              }
+              <div className="text-2xl">📅</div>
+              <p className="text-sm font-bold text-white/40">Chưa có trận nào sắp diễn ra</p>
             </div>
-          )}
-          {upcomingMatches.length > 0 && (
+          ) : (
             <div className="rounded-3xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <div className="flex items-center gap-2">
                   <Zap size={14} className="text-[#00e676]" />
-                  <h3 className="font-bold text-white text-sm">Trận sắp tới</h3>
+                  <h3 className="font-bold text-white text-sm">Trận đấu</h3>
                 </div>
                 <Link href="/matches" className="text-[10px] text-white/30 hover:text-white/60">Xem tất cả →</Link>
               </div>
               <div className="divide-y divide-white/5">
                 {upcomingMatches.map(match => {
                   const ps = getPickState(match.id, match)
-                  // Có ít nhất 1 loại kèo khả dụng: exact luôn OK; ah cần ahLine; ou cần ouLine
-                  const hasKeo = match.allowedBetTypes.includes("exact")
+                  const hasKeo = match.hasConfig && (
+                    match.allowedBetTypes.includes("exact")
                     || (match.allowedBetTypes.includes("ah") && match.ahLine != null)
                     || (match.allowedBetTypes.includes("ou") && match.ouLine != null)
+                  )
                   const sideLabel = ps.side === "home" ? match.homeTeam
                     : ps.side === "away" ? match.awayTeam
                     : ps.side === "over" ? "Tài" : ps.side === "under" ? "Xỉu" : null
+
+                  const { homeCount, awayCount, overCount, underCount } = match.predStats
+                  const ahTotal = homeCount + awayCount
+                  const ouTotal = overCount + underCount
+                  const homePct = ahTotal > 0 ? Math.round(homeCount / ahTotal * 100) : 50
+                  const awayPct = ahTotal > 0 ? 100 - homePct : 50
+                  const overPct = ouTotal > 0 ? Math.round(overCount / ouTotal * 100) : 50
+                  const underPct = ouTotal > 0 ? 100 - overPct : 50
+
                   return (
                     <div key={match.id} className="px-4 py-4 space-y-3">
+
                       {/* Match header */}
                       <div className="flex items-center gap-2">
                         <div className="relative w-8 h-5 rounded overflow-hidden flex-shrink-0">
                           <Image src={flagUrl(match.homeFlag)} alt="" fill className="object-cover" unoptimized />
                         </div>
                         <span className="text-sm font-bold text-white truncate flex-1">{match.homeTeam}</span>
-                        <div className="text-center flex-shrink-0 px-1">
-                          <div className="text-[10px] text-white/30 font-bold">VS</div>
-<div className="text-[9px] text-white/25">{formatDateTimeParts(match.kickoffAt).time} · {formatDateTimeParts(match.kickoffAt).date}</div>
+                        <div className="text-center flex-shrink-0 px-1 min-w-[64px]">
+                          {match.isLive ? (
+                            <>
+                              <div className="text-base font-black text-white">{match.scoreHome ?? 0} – {match.scoreAway ?? 0}</div>
+                              <div className="flex items-center justify-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                <span className="text-[9px] font-bold text-red-400">{match.minute ?? "?"}&apos;</span>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-[10px] text-white/30 font-bold">VS</div>
+                              <div className="text-[9px] text-white/25">{formatDateTimeParts(match.kickoffAt).time}</div>
+                              <div className="text-[9px] text-white/20">{formatDateTimeParts(match.kickoffAt).date}</div>
+                            </>
+                          )}
                           <div className="flex items-center justify-center gap-1 mt-0.5">
                             {match.pointsMultiplier > 1 && (
                               <span className="text-[8px] font-black px-1 rounded"
-                                style={{ background: "rgba(255,215,0,0.2)", color: "#ffd700" }}>
-                                ×{match.pointsMultiplier}
-                              </span>
+                                style={{ background: "rgba(255,215,0,0.2)", color: "#ffd700" }}>×{match.pointsMultiplier}</span>
                             )}
                             {match.blindMode && (
-                              <span className="text-[8px] font-black px-1 rounded"
-                                style={{ background: "rgba(124,58,237,0.2)", color: "#a78bfa" }}>
-                                🙈
-                              </span>
+                              <span className="text-[8px] px-1 rounded"
+                                style={{ background: "rgba(124,58,237,0.2)", color: "#a78bfa" }}>🙈</span>
                             )}
                           </div>
                         </div>
@@ -311,8 +326,75 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                         </div>
                       </div>
 
+                      {/* Kèo info — luôn hiển thị nếu có */}
+                      {(match.ahLine != null || match.ouLine != null) && (
+                        <div className="flex gap-2">
+                          {match.ahLine != null && (
+                            <div className="flex-1 px-2.5 py-1.5 rounded-lg text-center"
+                              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                              <div className="text-[9px] text-white/30 font-bold uppercase tracking-wide">Chấp</div>
+                              <div className="text-xs font-black text-white/80">
+                                {match.ahLine > 0 ? "+" : ""}{match.ahLine}
+                              </div>
+                            </div>
+                          )}
+                          {match.ouLine != null && (
+                            <div className="flex-1 px-2.5 py-1.5 rounded-lg text-center"
+                              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                              <div className="text-[9px] text-white/30 font-bold uppercase tracking-wide">Tài/Xỉu</div>
+                              <div className="text-xs font-black text-white/80">{match.ouLine}</div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Tỉ lệ dự đoán */}
+                      {(ahTotal > 0 || ouTotal > 0) && (
+                        <div className="space-y-1.5">
+                          {ahTotal > 0 && (
+                            <div>
+                              <div className="flex justify-between text-[9px] text-white/30 mb-0.5">
+                                <span>{match.homeTeam} {homePct}%</span>
+                                <span>{ahTotal} người đoán kèo chấp</span>
+                                <span>{awayPct}% {match.awayTeam}</span>
+                              </div>
+                              <div className="flex h-1.5 rounded-full overflow-hidden gap-px">
+                                <div className="rounded-l-full transition-all" style={{ width: `${homePct}%`, background: "linear-gradient(90deg,#00e676,#00bcd4)" }} />
+                                <div className="rounded-r-full transition-all" style={{ width: `${awayPct}%`, background: "linear-gradient(90deg,#ff5252,#ff1744)" }} />
+                              </div>
+                            </div>
+                          )}
+                          {ouTotal > 0 && (
+                            <div>
+                              <div className="flex justify-between text-[9px] text-white/30 mb-0.5">
+                                <span>Tài {overPct}%</span>
+                                <span>{ouTotal} người đoán tài/xỉu</span>
+                                <span>{underPct}% Xỉu</span>
+                              </div>
+                              <div className="flex h-1.5 rounded-full overflow-hidden gap-px">
+                                <div className="rounded-l-full transition-all" style={{ width: `${overPct}%`, background: "linear-gradient(90deg,#ffd700,#ff8f00)" }} />
+                                <div className="rounded-r-full transition-all" style={{ width: `${underPct}%`, background: "linear-gradient(90deg,#7c3aed,#a78bfa)" }} />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Pick area */}
-                      {ps.done ? (
+                      {!match.hasConfig ? (
+                        <div className="flex items-center justify-between py-1">
+                          <span className="text-[10px] text-white/25 italic">Admin chưa mở kèo cho trận này</span>
+                          {isGroupAdmin && (
+                            <Link href={`/groups/${group.id}/admin`}
+                              className="text-[10px] font-bold px-2 py-1 rounded-lg"
+                              style={{ background: "rgba(0,230,118,0.08)", color: "#00e676" }}>
+                              Mở kèo
+                            </Link>
+                          )}
+                        </div>
+                      ) : match.isLive ? (
+                        <div className="text-[10px] text-white/30 text-center py-1">Trận đang diễn ra — kèo đã khóa</div>
+                      ) : ps.done ? (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-sm font-bold" style={{ color: "#00e676" }}>
                             <CheckCircle2 size={15} /> Đã đoán: {sideLabel ?? (ps.betType === "exact" ? "Tỉ số" : "—")}
@@ -323,10 +405,9 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                           </button>
                         </div>
                       ) : !hasKeo ? (
-                        <div className="text-xs text-white/50 text-center py-1">Chưa có kèo — <Link href={`/matches/${match.id}`} className="underline hover:text-white/50">Xem trận</Link></div>
+                        <div className="text-xs text-white/40 text-center py-1">Kèo chưa đủ thông tin</div>
                       ) : (
                         <div className="space-y-2">
-                          {/* Bet type toggle — chỉ hiện các loại được phép */}
                           {match.allowedBetTypes.filter(t => t !== "exact").length > 1 && (
                             <div className="flex gap-1.5">
                               {[{ id: "ah", label: "Kèo chấp" }, { id: "ou", label: "Tài/Xỉu" }]
@@ -344,7 +425,6 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                             </div>
                           )}
 
-                          {/* Side buttons */}
                           {ps.betType === "ah" && match.ahLine != null && (
                             <div className="flex gap-2">
                               {[
@@ -387,9 +467,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                             </div>
                           )}
 
-                          {ps.error && (
-                            <p className="text-xs text-red-400 px-1">{ps.error}</p>
-                          )}
+                          {ps.error && <p className="text-xs text-red-400 px-1">{ps.error}</p>}
 
                           <div className="flex gap-2">
                             <button onClick={() => submitPick(match)}
