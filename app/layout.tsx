@@ -6,6 +6,7 @@ import { CronRunner } from "@/components/cron-runner"
 import { PwaInit } from "@/components/pwa-init"
 import { NavigationProgress } from "@/components/navigation-progress"
 import { Onboarding } from "@/components/onboarding"
+import { PushNotificationPrompt } from "@/components/push-prompt"
 import { ToastProvider } from "@/components/toast"
 
 export const viewport: Viewport = {
@@ -42,6 +43,7 @@ export default function RootLayout({
           </Suspense>
           <PwaInit />
           <Onboarding />
+          <PushNotificationPrompt />
           <Navbar />
           <CronRunner />
           <main className="max-w-5xl mx-auto px-4 py-6 pb-28 md:pb-8">

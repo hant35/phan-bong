@@ -43,6 +43,7 @@ export function Onboarding() {
   function dismiss() {
     localStorage.setItem("pb_onboarded", "1")
     setVisible(false)
+    window.dispatchEvent(new Event("pb_onboarded"))
   }
 
   if (!visible) return null
