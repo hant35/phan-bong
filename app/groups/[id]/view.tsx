@@ -103,7 +103,9 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
   const [notifyTitle, setNotifyTitle] = useState("")
   const [notifyBody, setNotifyBody] = useState("")
   const [notifySending, setNotifySending] = useState(false)
-  const [notifyResult, setNotifyResult] = useState<{ ok: boolean; sent?: number; error?: string } | null>(null)
+  const [notifyResult, setNotifyResult] = useState<{
+    ok: boolean; delivered?: number; failed?: number; expired?: number; total?: number; error?: string
+  } | null>(null)
 
   async function sendGroupNotify() {
     if (!notifyTitle.trim() || !notifyBody.trim()) return
@@ -116,7 +118,17 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
         body: JSON.stringify({ title: notifyTitle, body: notifyBody, target: "group", groupId: group.id }),
       })
       const data = await res.json()
-      setNotifyResult(res.ok ? { ok: true, sent: data.sent } : { ok: false, error: data.error })
+      if (!res.ok || !data.ok) {
+        setNotifyResult({ ok: false, error: data.error ?? "Lỗi không xác định" })
+      } else {
+        setNotifyResult({
+          ok: true,
+          delivered: data.delivered,
+          failed: data.failed,
+          expired: data.expired,
+          total: data.total,
+        })
+      }
     } catch {
       setNotifyResult({ ok: false, error: "Lỗi kết nối" })
     } finally {
@@ -758,7 +770,9 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                 ? { background: "rgba(0,230,118,0.08)", border: "1px solid rgba(0,230,118,0.2)" }
                 : { background: "rgba(255,82,82,0.08)", border: "1px solid rgba(255,82,82,0.2)" }}>
                 {notifyResult.ok
-                  ? <><CheckCircle2 size={15}/> Đã gửi tới {notifyResult.sent} thiết bị</>
+                  ? <><CheckCircle2 size={15}/> Đã gửi {notifyResult.delivered}/{notifyResult.total} thiết bị
+                    {notifyResult.failed ? ` (${notifyResult.failed} lỗi)` : ""}
+                    {notifyResult.expired ? ` (${notifyResult.expired} hết hạn)` : ""}</>
                   : <><AlertCircle size={15}/> {notifyResult.error}</>
                 }
               </div>

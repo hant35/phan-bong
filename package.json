@@ -7,7 +7,7 @@
     "build": "prisma migrate deploy && prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && patch-package",
     "local:schema": "node scripts/gen-local-schema.mjs",
     "local:setup": "npm run local:schema && prisma generate --schema=prisma/schema.local.prisma && prisma db push --schema=prisma/schema.local.prisma --skip-generate --force-reset --accept-data-loss && tsx prisma/seed.ts",
     "local:dev": "npm run local:schema && prisma generate --schema=prisma/schema.local.prisma && next dev",
@@ -39,6 +39,7 @@
     "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
+    "patch-package": "^8.0.1",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
     "typescript": "^5"

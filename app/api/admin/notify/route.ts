@@ -19,9 +19,20 @@ export async function POST(req: NextRequest) {
   // Super admin gửi cho tất cả
   if (target === "all") {
     if (user.role !== "admin") return NextResponse.json({ error: "Không có quyền" }, { status: 403 })
-    await sendPushToAll(title.trim(), body.trim(), url || "/")
-    const total = await prisma.pushSubscription.count()
-    return NextResponse.json({ ok: true, sent: total })
+    const result = await sendPushToAll(title.trim(), body.trim(), url || "/")
+    if (!result.configured) {
+      return NextResponse.json({ error: "Chưa cấu hình VAPID keys trên server" }, { status: 503 })
+    }
+    if (result.total === 0) {
+      return NextResponse.json({ error: "Chưa có thiết bị đăng ký nhận thông báo" }, { status: 400 })
+    }
+    return NextResponse.json({
+      ok: result.delivered > 0,
+      ...result,
+      error: result.delivered === 0
+        ? "Không gửi được thông báo. Kiểm tra VAPID keys (public/private cùng cặp; đổi NEXT_PUBLIC_VAPID_PUBLIC_KEY cần deploy lại)."
+        : undefined,
+    })
   }
 
   // Admin hội gửi cho thành viên trong hội
@@ -41,10 +52,32 @@ export async function POST(req: NextRequest) {
       select: { userId: true },
     })
 
-    await Promise.allSettled(
-      members.map(m => sendPushToUser(m.userId, title.trim(), body.trim(), url || `/groups/${groupId}`))
+    const results = await Promise.all(
+      members.map(m => sendPushToUser(m.userId, title.trim(), body.trim(), url || `/groups/${groupId}`)),
     )
-    return NextResponse.json({ ok: true, sent: members.length })
+    const aggregated = results.reduce(
+      (acc, r) => ({
+        delivered: acc.delivered + r.delivered,
+        failed: acc.failed + r.failed,
+        expired: acc.expired + r.expired,
+        total: acc.total + r.total,
+        configured: acc.configured && r.configured,
+      }),
+      { delivered: 0, failed: 0, expired: 0, total: 0, configured: true },
+    )
+    if (!aggregated.configured) {
+      return NextResponse.json({ error: "Chưa cấu hình VAPID keys trên server" }, { status: 503 })
+    }
+    if (aggregated.total === 0) {
+      return NextResponse.json({ error: "Không có thành viên nào bật thông báo" }, { status: 400 })
+    }
+    return NextResponse.json({
+      ok: aggregated.delivered > 0,
+      ...aggregated,
+      error: aggregated.delivered === 0
+        ? "Không gửi được thông báo. Kiểm tra VAPID keys (public/private cùng cặp; đổi NEXT_PUBLIC_VAPID_PUBLIC_KEY cần deploy lại)."
+        : undefined,
+    })
   }
 
   return NextResponse.json({ error: "target không hợp lệ" }, { status: 400 })
