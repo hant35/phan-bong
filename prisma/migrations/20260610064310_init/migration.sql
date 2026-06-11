@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE "User" (
+CREATE TABLE IF NOT EXISTS "User" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "passwordHash" TEXT NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE "User" (
 );
 
 -- CreateTable
-CREATE TABLE "Group" (
+CREATE TABLE IF NOT EXISTS "Group" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "visibility" TEXT NOT NULL DEFAULT 'private',
@@ -27,7 +27,7 @@ CREATE TABLE "Group" (
 );
 
 -- CreateTable
-CREATE TABLE "GroupMember" (
+CREATE TABLE IF NOT EXISTS "GroupMember" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "groupId" TEXT NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE "GroupMember" (
 );
 
 -- CreateTable
-CREATE TABLE "Match" (
+CREATE TABLE IF NOT EXISTS "Match" (
     "id" TEXT NOT NULL,
     "homeTeam" TEXT NOT NULL,
     "awayTeam" TEXT NOT NULL,
@@ -71,7 +71,7 @@ CREATE TABLE "Match" (
 );
 
 -- CreateTable
-CREATE TABLE "Prediction" (
+CREATE TABLE IF NOT EXISTS "Prediction" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "matchId" TEXT NOT NULL,
@@ -88,7 +88,7 @@ CREATE TABLE "Prediction" (
 );
 
 -- CreateTable
-CREATE TABLE "Badge" (
+CREATE TABLE IF NOT EXISTS "Badge" (
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "emoji" TEXT NOT NULL,
@@ -98,7 +98,7 @@ CREATE TABLE "Badge" (
 );
 
 -- CreateTable
-CREATE TABLE "UserBadge" (
+CREATE TABLE IF NOT EXISTS "UserBadge" (
     "userId" TEXT NOT NULL,
     "badgeCode" TEXT NOT NULL,
     "earnedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -107,7 +107,7 @@ CREATE TABLE "UserBadge" (
 );
 
 -- CreateTable
-CREATE TABLE "Activity" (
+CREATE TABLE IF NOT EXISTS "Activity" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "groupId" TEXT,
@@ -121,7 +121,7 @@ CREATE TABLE "Activity" (
 );
 
 -- CreateTable
-CREATE TABLE "Comment" (
+CREATE TABLE IF NOT EXISTS "Comment" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "matchId" TEXT NOT NULL,
@@ -132,7 +132,7 @@ CREATE TABLE "Comment" (
 );
 
 -- CreateTable
-CREATE TABLE "Notification" (
+CREATE TABLE IF NOT EXISTS "Notification" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "type" TEXT NOT NULL,
@@ -146,7 +146,7 @@ CREATE TABLE "Notification" (
 );
 
 -- CreateTable
-CREATE TABLE "Setting" (
+CREATE TABLE IF NOT EXISTS "Setting" (
     "key" TEXT NOT NULL,
     "value" TEXT NOT NULL,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -155,7 +155,7 @@ CREATE TABLE "Setting" (
 );
 
 -- CreateTable
-CREATE TABLE "Session" (
+CREATE TABLE IF NOT EXISTS "Session" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "token" TEXT NOT NULL,
@@ -166,55 +166,61 @@ CREATE TABLE "Session" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Group_inviteCode_key" ON "Group"("inviteCode");
-
--- CreateIndex
-CREATE UNIQUE INDEX "GroupMember_userId_groupId_key" ON "GroupMember"("userId", "groupId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Prediction_userId_matchId_key" ON "Prediction"("userId", "matchId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Session_token_key" ON "Session"("token");
+CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "Group_inviteCode_key" ON "Group"("inviteCode");
+CREATE UNIQUE INDEX IF NOT EXISTS "GroupMember_userId_groupId_key" ON "GroupMember"("userId", "groupId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Prediction_userId_matchId_key" ON "Prediction"("userId", "matchId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Session_token_key" ON "Session"("token");
 
 -- AddForeignKey
-ALTER TABLE "Group" ADD CONSTRAINT "Group_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "Group" ADD CONSTRAINT "Group_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- AddForeignKey
-ALTER TABLE "GroupMember" ADD CONSTRAINT "GroupMember_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "GroupMember" ADD CONSTRAINT "GroupMember_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- AddForeignKey
-ALTER TABLE "GroupMember" ADD CONSTRAINT "GroupMember_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "GroupMember" ADD CONSTRAINT "GroupMember_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- AddForeignKey
-ALTER TABLE "Prediction" ADD CONSTRAINT "Prediction_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "Prediction" ADD CONSTRAINT "Prediction_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- AddForeignKey
-ALTER TABLE "Prediction" ADD CONSTRAINT "Prediction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "Prediction" ADD CONSTRAINT "Prediction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- AddForeignKey
-ALTER TABLE "UserBadge" ADD CONSTRAINT "UserBadge_badgeCode_fkey" FOREIGN KEY ("badgeCode") REFERENCES "Badge"("code") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "UserBadge" ADD CONSTRAINT "UserBadge_badgeCode_fkey" FOREIGN KEY ("badgeCode") REFERENCES "Badge"("code") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- AddForeignKey
-ALTER TABLE "UserBadge" ADD CONSTRAINT "UserBadge_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "UserBadge" ADD CONSTRAINT "UserBadge_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- AddForeignKey
-ALTER TABLE "Activity" ADD CONSTRAINT "Activity_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "Activity" ADD CONSTRAINT "Activity_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- AddForeignKey
-ALTER TABLE "Activity" ADD CONSTRAINT "Activity_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "Activity" ADD CONSTRAINT "Activity_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- AddForeignKey
-ALTER TABLE "Comment" ADD CONSTRAINT "Comment_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "Comment" ADD CONSTRAINT "Comment_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- AddForeignKey
-ALTER TABLE "Comment" ADD CONSTRAINT "Comment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "Comment" ADD CONSTRAINT "Comment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- AddForeignKey
-ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- AddForeignKey
-ALTER TABLE "Notification" ADD CONSTRAINT "Notification_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "Notification" ADD CONSTRAINT "Notification_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

@@ -1,9 +1,9 @@
 -- AlterTable
-ALTER TABLE "User" ADD COLUMN     "googleId" TEXT,
-ALTER COLUMN "passwordHash" SET DEFAULT '';
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "googleId" TEXT;
+ALTER TABLE "User" ALTER COLUMN "passwordHash" SET DEFAULT '';
 
 -- CreateTable
-CREATE TABLE "PushSubscription" (
+CREATE TABLE IF NOT EXISTS "PushSubscription" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "endpoint" TEXT NOT NULL,
@@ -15,10 +15,10 @@ CREATE TABLE "PushSubscription" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "PushSubscription_endpoint_key" ON "PushSubscription"("endpoint");
-
--- CreateIndex
-CREATE UNIQUE INDEX "User_googleId_key" ON "User"("googleId");
+CREATE UNIQUE INDEX IF NOT EXISTS "PushSubscription_endpoint_key" ON "PushSubscription"("endpoint");
+CREATE UNIQUE INDEX IF NOT EXISTS "User_googleId_key" ON "User"("googleId");
 
 -- AddForeignKey
-ALTER TABLE "PushSubscription" ADD CONSTRAINT "PushSubscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "PushSubscription" ADD CONSTRAINT "PushSubscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
