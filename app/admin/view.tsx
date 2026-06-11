@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Shield, Zap, Users, Trash2, Save, Check, X, UserMinus, ChevronDown, ChevronUp, Search, HelpCircle, Plus, RefreshCw, Database, CheckSquare, Square, AlertCircle, CheckCircle2, Bell, Send } from "lucide-react"
+import { Shield, Zap, Users, Trash2, Save, Check, X, UserMinus, ChevronDown, ChevronUp, Search, HelpCircle, Plus, RefreshCw, Database, CheckSquare, Square, AlertCircle, CheckCircle2, Bell, Send, BarChart2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagUrl, formatDateTimeParts } from "@/lib/format"
 
@@ -118,6 +118,39 @@ export function AdminView({
     details: { name: string; betType: string; result: string; reason: string }[]
     skippedUsers: { name: string; groupName: string }[]
   } | null>(null)
+
+  // ── Grading status modal (per-group) ──
+  type MemberPred = {
+    userId: string; name: string; avatar: string | null; points: number
+    wins: number; losses: number; skipped: number
+    prediction: {
+      betType: string; side: string | null; homeScore: number | null; awayScore: number | null
+      confidence: number; result: string | null; points: number
+    } | null
+  }
+  type GroupGrading = {
+    groupId: string; groupName: string; ahLine: number | null; ouLine: number | null
+    pointsMultiplier: number; predCount: number; gradedCount: number; winCount: number; lossCount: number
+    members: MemberPred[]
+  }
+  type GradingStatus = {
+    match: { id: string; homeTeam: string; awayTeam: string; scoreHome: number | null; scoreAway: number | null; status: string; ahLine: number | null; ouLine: number | null }
+    isGraded: boolean; hasScore: boolean
+    groups: GroupGrading[]
+  }
+  const [gradingStatus, setGradingStatus] = useState<GradingStatus | null>(null)
+  const [gradingStatusLoading, setGradingStatusLoading] = useState(false)
+
+  async function fetchGradingStatus(matchId: string) {
+    setGradingStatusLoading(true)
+    setGradingStatus(null)
+    try {
+      const res = await fetch(`/api/admin/matches/grading?matchId=${matchId}`)
+      const data = await res.json()
+      if (res.ok) setGradingStatus(data)
+    } catch { /* ignore */ }
+    setGradingStatusLoading(false)
+  }
 
   // Load saved API keys from DB on mount
   const loadSavedKeys = useCallback(async () => {
@@ -498,6 +531,13 @@ export function AdminView({
                         <span className="flex items-center gap-1 text-[#00e676] text-xs font-bold">
                           <Check size={14} /> Đã lưu
                         </span>
+                      )}
+                      {(m.scoreHome != null || m.status === "finished") && (
+                        <button onClick={() => fetchGradingStatus(m.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-[#ffd700] hover:bg-[#ffd700]/10 border border-[#ffd700]/20 transition-colors"
+                          title="Xem tình trạng tính điểm">
+                          <BarChart2 size={12} /> Xem điểm
+                        </button>
                       )}
                       <button onClick={() => deleteMatch(m.id, `${m.homeTeam} vs ${m.awayTeam}`)}
                         className="p-1.5 rounded-lg hover:bg-red-500/10 text-white/45 hover:text-red-400 transition-colors"
@@ -1349,6 +1389,141 @@ export function AdminView({
                 {addingMatch ? "Đang tạo..." : "Tạo trận đấu"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ GRADING STATUS MODAL (per-group) ══════════ */}
+      {(gradingStatus || gradingStatusLoading) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setGradingStatus(null)}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 p-6"
+            style={{ background: "linear-gradient(145deg, #1a1d28, #0f1117)" }}
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <BarChart2 size={18} className="text-[#ffd700]" /> Tình trạng tính điểm
+              </h3>
+              <button onClick={() => setGradingStatus(null)} className="p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white"><X size={20} /></button>
+            </div>
+
+            {gradingStatusLoading && (
+              <div className="flex items-center justify-center py-12 text-white/40 text-sm">
+                <RefreshCw size={18} className="animate-spin mr-2" /> Đang tải...
+              </div>
+            )}
+
+            {gradingStatus && (
+              <>
+                {/* Match score */}
+                <div className="text-center mb-5 py-4 rounded-xl bg-white/5">
+                  <p className="text-sm text-white/50 mb-1">{gradingStatus.match.homeTeam} vs {gradingStatus.match.awayTeam}</p>
+                  {gradingStatus.hasScore ? (
+                    <p className="text-4xl font-black text-white">{gradingStatus.match.scoreHome} – {gradingStatus.match.scoreAway}</p>
+                  ) : (
+                    <p className="text-sm text-white/30">Chưa có tỉ số</p>
+                  )}
+                  <div className="flex items-center justify-center gap-3 mt-2 text-xs text-white/40">
+                    {gradingStatus.match.ahLine != null && <span>AH: {gradingStatus.match.ahLine > 0 ? "+" : ""}{gradingStatus.match.ahLine}</span>}
+                    {gradingStatus.match.ouLine != null && <span>O/U: {gradingStatus.match.ouLine}</span>}
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full font-bold text-[10px]",
+                      gradingStatus.match.status === "finished" ? "bg-white/5 text-white/30" :
+                      gradingStatus.match.status === "live" ? "bg-red-500/15 text-red-400" :
+                      "bg-blue-500/15 text-blue-400"
+                    )}>
+                      {gradingStatus.match.status === "finished" ? "Kết thúc" : gradingStatus.match.status === "live" ? "LIVE" : "Sắp đá"}
+                    </span>
+                    {!gradingStatus.isGraded && gradingStatus.hasScore && (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-bold text-[10px]">Xem thử (chưa chấm)</span>
+                    )}
+                  </div>
+                </div>
+
+                {gradingStatus.groups.length === 0 && (
+                  <p className="text-sm text-white/30 text-center py-6">Chưa có hội nào đặt kèo trận này.</p>
+                )}
+
+                {/* Per-group */}
+                <div className="space-y-5">
+                  {gradingStatus.groups.map(g => (
+                    <div key={g.groupId} className="rounded-xl border border-white/8 overflow-hidden">
+                      {/* Group header */}
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5"
+                        style={{ background: "rgba(255,255,255,0.04)" }}>
+                        <div className="flex items-center gap-2">
+                          <Users size={14} className="text-[#00bcd4]" />
+                          <span className="font-bold text-sm text-white">{g.groupName}</span>
+                          {g.pointsMultiplier > 1 && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#ffd700]/15 text-[#ffd700] font-bold">{g.pointsMultiplier}x</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-[10px]">
+                          {g.ahLine != null && <span className="text-white/40">AH: {g.ahLine > 0 ? "+" : ""}{g.ahLine}</span>}
+                          {g.ouLine != null && <span className="text-white/40">O/U: {g.ouLine}</span>}
+                          <span className="text-[#00e676] font-bold">{g.winCount}W</span>
+                          <span className="text-red-400 font-bold">{g.lossCount}L</span>
+                          <span className="text-white/30">{g.predCount - g.gradedCount > 0 ? `${g.predCount - g.gradedCount} chưa chấm` : "✓ Đã chấm"}</span>
+                        </div>
+                      </div>
+
+                      {/* Members table */}
+                      <div className="divide-y divide-white/4">
+                        {g.members.map(m => {
+                          const pred = m.prediction
+                          const betLabel = pred ? (
+                            pred.betType === "skip" ? "Bỏ qua" :
+                            pred.betType === "ah" ? `AH ${pred.side === "home" ? "Nhà" : "Khách"}` :
+                            pred.betType === "ou" ? `${pred.side === "over" ? "Trên" : "Dưới"}` :
+                            pred.betType === "1x2" ? (pred.side === "home" ? "Nhà" : pred.side === "away" ? "Khách" : "Hòa") :
+                            pred.betType === "exact" ? `${pred.homeScore}-${pred.awayScore}` : pred.betType
+                          ) : null
+                          const starLabel = pred && pred.betType !== "skip" ? `⭐${pred.confidence}` : null
+
+                          return (
+                            <div key={m.userId} className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.02] transition-colors">
+                              {/* Avatar */}
+                              <div className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-black flex-shrink-0"
+                                style={{ background: "linear-gradient(135deg,#00e676,#00bcd4)", color: "#0f1117" }}>
+                                {m.avatar ?? m.name.slice(0, 2).toUpperCase()}
+                              </div>
+                              {/* Name */}
+                              <span className="text-sm text-white font-medium flex-1 truncate">{m.name}</span>
+                              {/* Prediction */}
+                              {pred && pred.betType !== "skip" ? (
+                                <span className="text-xs text-white/50 font-mono bg-white/5 px-2 py-0.5 rounded-lg flex-shrink-0">
+                                  {betLabel} {starLabel}
+                                </span>
+                              ) : pred?.betType === "skip" ? (
+                                <span className="text-xs text-white/25 flex-shrink-0">Bỏ qua</span>
+                              ) : (
+                                <span className="text-xs text-white/25 flex-shrink-0">Chưa đoán</span>
+                              )}
+                              {/* Result */}
+                              {pred?.result === "win" ? (
+                                <span className="flex items-center gap-1 text-xs font-bold text-[#00e676] flex-shrink-0">
+                                  <Check size={12} /> +{pred.points}xu
+                                </span>
+                              ) : pred?.result === "loss" && pred.betType !== "skip" ? (
+                                <span className="flex items-center gap-1 text-xs font-bold text-red-400 flex-shrink-0">
+                                  <X size={12} /> {pred.points < 0 ? pred.points : ""}xu
+                                </span>
+                              ) : pred?.result === "loss" && pred.betType === "skip" ? (
+                                <span className="text-xs text-white/25 flex-shrink-0">–</span>
+                              ) : gradingStatus.hasScore ? (
+                                <span className="text-xs text-amber-400/70 flex-shrink-0">Chưa chấm</span>
+                              ) : null}
+                              {/* Total points */}
+                              <span className="text-xs text-[#ffd700] font-bold w-16 text-right flex-shrink-0">{m.points} xu</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
