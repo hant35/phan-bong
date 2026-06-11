@@ -14,6 +14,7 @@ model User {
   passwordHash String        @default("")
   name         String
   displayName  String?
+  statusText   String?
   avatar       String?
   role         String        @default("user")
   googleId     String?       @unique
@@ -29,6 +30,7 @@ model User {
   notifications     Notification[]
   pushSubscriptions PushSubscription[]
   groupChats        GroupChat[]
+  groupMatchConfigs GroupMatchConfig[] @relation("ConfigUpdater")
 }
 
 model PushSubscription {
@@ -48,16 +50,20 @@ model Group {
   inviteCode String        @unique
   adminId    String
   createdAt  DateTime      @default(now())
-  activities Activity[]
-  admin      User          @relation("GroupAdmin", fields: [adminId], references: [id])
-  members    GroupMember[]
-  chats      GroupChat[]
+  activities   Activity[]
+  admin        User          @relation("GroupAdmin", fields: [adminId], references: [id])
+  members      GroupMember[]
+  chats        GroupChat[]
+  predictions  Prediction[]
+  matchConfigs GroupMatchConfig[]
+  seasons      GroupSeason[]
 }
 
 model GroupMember {
   id       String   @id @default(cuid())
   userId   String
   groupId  String
+  role     String   @default("member")  // "owner" | "admin" | "member"
   points   Int      @default(0)
   wins     Int      @default(0)
   losses   Int      @default(0)
@@ -67,6 +73,37 @@ model GroupMember {
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, groupId])
+}
+
+// Cấu hình kèo riêng của từng hội cho từng trận
+model GroupMatchConfig {
+  id              String   @id @default(cuid())
+  groupId         String
+  matchId         String
+  ahLine          Float?
+  ouLine          Float?
+  allowedBetTypes String   @default("[\"ah\",\"ou\",\"exact\"]") // JSON array
+  pointsMultiplier Int     @default(1)   // 1x, 2x, 3x — trận đinh nhân hệ số
+  lockMinutes     Int      @default(0)   // khóa kèo trước X phút (0 = dùng mặc định hệ thống)
+  blindMode       Boolean  @default(false) // ẩn pick của người khác trước kickoff
+  updatedAt       DateTime @updatedAt
+  updatedBy       String
+  group           Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  match           Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  updater         User     @relation("ConfigUpdater", fields: [updatedBy], references: [id])
+
+  @@unique([groupId, matchId])
+}
+
+// Mùa giải — snapshot standings khi reset
+model GroupSeason {
+  id        String    @id @default(cuid())
+  groupId   String
+  name      String
+  snapshot  String    @default("[]") // JSON: [{userId, name, avatar, points, wins, losses, skipped}]
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  group     Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model Match {
@@ -97,12 +134,14 @@ model Match {
   predictions   Prediction[]
   comments      Comment[]
   notifications Notification[]
+  groupConfigs  GroupMatchConfig[]
 }
 
 model Prediction {
   id         String   @id @default(cuid())
   userId     String
   matchId    String
+  groupId    String
   betType    String
   side       String?
   homeScore  Int?
@@ -113,8 +152,9 @@ model Prediction {
   createdAt  DateTime @default(now())
   match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group      Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, matchId])
+  @@unique([userId, matchId, groupId])
 }
 
 model Badge {

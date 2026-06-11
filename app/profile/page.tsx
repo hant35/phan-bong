@@ -31,7 +31,7 @@ export default async function ProfilePage() {
     match: `${p.match.homeTeam} vs ${p.match.awayTeam}`,
     homeFlag: p.match.homeFlag, awayFlag: p.match.awayFlag,
     pickLabel: p.betType === "exact" ? `Tỉ số ${p.homeScore}-${p.awayScore}` :
-               p.betType === "ou" ? (p.side === "over" ? "Tài" : "Xỉu") :
+               p.betType === "ou" ? (p.side === "over" ? "Trên" : "Dưới") :
                p.betType === "ah" ? `Chấp → ${p.side === "home" ? p.match.homeTeam : p.match.awayTeam}` :
                `1X2 → ${p.side === "home" ? p.match.homeTeam : p.side === "away" ? p.match.awayTeam : "Hòa"}`,
     confidence: p.confidence,
@@ -48,7 +48,7 @@ export default async function ProfilePage() {
 
   return <ProfileView
     user={{
-      name: user.name, displayName: user.displayName, avatar: user.avatar ?? "BN",
+      name: user.name, displayName: user.displayName, statusText: user.statusText ?? null, avatar: user.avatar ?? "BN",
       totalPoints: user.totalPoints, streak: user.streak, createdAt: user.createdAt.toISOString(),
       rank: myIdx + 1, total: predictions.filter(p => p.result === "win" || p.result === "loss").length,
       correct: predictions.filter(p => p.result === "win").length,

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db"
 import { createSession } from "@/lib/auth"
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL!
-const ADMIN_EMAIL = "nguyenha3535@gmail.com"
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "nguyenha3535@gmail.com"
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)

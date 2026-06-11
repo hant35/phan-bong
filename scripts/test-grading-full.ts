@@ -443,6 +443,22 @@ async function runIntegrationTest() {
     await prisma.prediction.deleteMany({ where: { matchId: { in: testMatchIds } } })
     await prisma.user.updateMany({ data: { totalPoints: 0, streak: 0 } })
 
+    // Lấy hoặc tạo group test cho integration test
+    let testGroup = await prisma.group.findFirst()
+    if (!testGroup) {
+      testGroup = await prisma.group.create({
+        data: { name: "Test Group", visibility: "private", inviteCode: "TEST01", adminId: users[0].id },
+      })
+      for (const u of users) {
+        await prisma.groupMember.upsert({
+          where: { userId_groupId: { userId: u.id, groupId: testGroup.id } },
+          update: {},
+          create: { userId: u.id, groupId: testGroup.id, role: u.id === users[0].id ? "owner" : "member" },
+        })
+      }
+    }
+    const testGroupId = testGroup.id
+
     // ── Set tỉ số và kèo cho 5 trận test ──
     const matchSetups = [
       { idx: 0, scoreHome: 2, scoreAway: 1, ahLine: -0.5, ouLine: 2.5, status: "finished" },  // Nhà thắng 2-1
@@ -508,6 +524,7 @@ async function runIntegrationTest() {
         data: {
           userId: p.userId,
           matchId: matches[p.matchIdx].id,
+          groupId: testGroupId,
           betType: p.betType,
           side: p.side,
           homeScore: p.homeScore,

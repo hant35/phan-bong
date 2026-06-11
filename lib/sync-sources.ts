@@ -264,7 +264,7 @@ const FD_STATUS_MAP: Record<string, string> = {
 }
 
 export async function syncFootballData(apiKey: string): Promise<SyncResult> {
-  const url = "https://api.football-data.org/v4/competitions/WC/matches"
+  const url = "https://api.football-data.org/v4/competitions/WC/matches?limit=100"
   const headers = { "X-Auth-Token": apiKey }
   const result: SyncResult = {
     source: "Football-Data.org", updated: 0, errors: [], details: [],

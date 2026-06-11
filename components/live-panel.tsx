@@ -146,10 +146,10 @@ export function LivePanel({ matchId, homeTeam, awayTeam, status, compact = false
           {/* OU */}
           {(data.stats.ou.over + data.stats.ou.under) > 0 && (
             <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3">
-              <p className="text-[10px] text-white/40 font-bold mb-2">📊 Tài/Xỉu</p>
+              <p className="text-[10px] text-white/40 font-bold mb-2">📊 Tổng bàn thắng</p>
               <div className="space-y-1.5">
-                <StatBar label="Tài" count={data.stats.ou.over} total={data.stats.ou.over + data.stats.ou.under} color="#ffd700" />
-                <StatBar label="Xỉu" count={data.stats.ou.under} total={data.stats.ou.over + data.stats.ou.under} color="#b388ff" />
+                <StatBar label="Trên" count={data.stats.ou.over} total={data.stats.ou.over + data.stats.ou.under} color="#ffd700" />
+                <StatBar label="Dưới" count={data.stats.ou.under} total={data.stats.ou.over + data.stats.ou.under} color="#b388ff" />
               </div>
             </div>
           )}

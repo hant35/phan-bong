@@ -21,13 +21,18 @@ export async function Navbar() {
     where: { userId: user.id, read: false },
   })
 
-  const isInGroup = await prisma.groupMember.count({ where: { userId: user.id } }) > 0
-  const unpickedCount = isInGroup ? await prisma.match.count({
+  // Dùng hội đầu tiên của user để đếm unpicked (group-specific predictions)
+  const firstMembership = await prisma.groupMember.findFirst({
+    where: { userId: user.id },
+    orderBy: { joinedAt: "asc" },
+    select: { groupId: true },
+  })
+  const unpickedCount = firstMembership ? await prisma.match.count({
     where: {
       status: "scheduled",
       kickoffAt: { gt: new Date() },
-      ahLine: { not: null },
-      predictions: { none: { userId: user.id } },
+      OR: [{ ahLine: { not: null } }, { ouLine: { not: null } }],
+      predictions: { none: { userId: user.id, groupId: firstMembership.groupId } },
     },
   }) : 0
 

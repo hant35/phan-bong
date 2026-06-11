@@ -405,6 +405,24 @@ async function main() {
   // ═══════════════════════════════════════════
   // PREDICTIONS (200+) — cho 15 trận đã có kết quả/đang chơi
   // ═══════════════════════════════════════════
+  // Cập nhật role "owner" cho admin mỗi hội
+  const groupAdminMap: Record<string, number> = {
+    [groups[0].id]: 1, [groups[1].id]: 3, [groups[2].id]: 6, [groups[3].id]: 0, [groups[4].id]: 9,
+  }
+  for (const [groupId, adminIdx] of Object.entries(groupAdminMap)) {
+    await prisma.groupMember.updateMany({
+      where: { groupId, userId: users[adminIdx].id },
+      data: { role: "owner" },
+    })
+  }
+
+  // Helper: lấy groupId hợp lệ cho user (user phải là member của group đó)
+  function validGroupId(userIdx: number): string {
+    if (userIdx < 10) return groups[0].id   // group 0 (IT): users 0-9
+    if (userIdx < 15) return groups[1].id   // group 1 (WC2026): users 0-14
+    return groups[3].id                      // group 3 (Dân Chơi): users 10-19
+  }
+
   console.log("📊 Tạo predictions...")
 
   const betTypes = ["ah", "ou", "1x2", "exact"]
@@ -475,7 +493,7 @@ async function main() {
 
       await prisma.prediction.create({
         data: {
-          userId: user.id, matchId: match.id, betType: bt,
+          userId: user.id, matchId: match.id, groupId: validGroupId(u), betType: bt,
           side, homeScore, awayScore,
           confidence: 1 + ((matchIdx + u) % 5),
           result, points: result === "win" ? 1 : 0,
@@ -508,10 +526,9 @@ async function main() {
 
       await prisma.prediction.create({
         data: {
-          userId: user.id, matchId: match.id, betType: bt,
+          userId: user.id, matchId: match.id, groupId: validGroupId(u), betType: bt,
           side, homeScore, awayScore,
           confidence: 1 + ((matchIdx + u) % 5),
-          // Chưa có result vì live
         },
       })
       predCount++
@@ -541,7 +558,7 @@ async function main() {
 
       await prisma.prediction.create({
         data: {
-          userId: user.id, matchId: match.id, betType: bt,
+          userId: user.id, matchId: match.id, groupId: validGroupId(u), betType: bt,
           side, homeScore, awayScore,
           confidence: 1 + ((matchIdx + u) % 5),
         },
@@ -562,7 +579,7 @@ async function main() {
       if (!predictedIds.has(users[u].id)) {
         await prisma.prediction.create({
           data: {
-            userId: users[u].id, matchId: match.id,
+            userId: users[u].id, matchId: match.id, groupId: groups[0].id,
             betType: "skip", side: null, confidence: 0,
             result: "loss", points: 0,
           },

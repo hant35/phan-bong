@@ -13,7 +13,7 @@ export function PwaInit() {
 }
 
 export function PushToggle() {
-  const [state, setState] = useState<"idle" | "granted" | "denied" | "loading">("idle")
+  const [state, setState] = useState<"idle" | "granted" | "denied" | "loading" | "error">("idle")
 
   useEffect(() => {
     if (!("Notification" in window)) { setState("denied"); return }
@@ -48,7 +48,8 @@ export function PushToggle() {
       })
       setState("granted")
     } catch {
-      setState("idle")
+      setState("error")
+      setTimeout(() => setState("idle"), 3000)
     }
   }
 
@@ -73,19 +74,23 @@ export function PushToggle() {
 
   if (state === "denied") return null
 
+  const isError = state === "error"
+
   return (
     <button
       onClick={state === "granted" ? unsubscribe : subscribe}
-      disabled={state === "loading"}
+      disabled={state === "loading" || isError}
       className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-50"
-      style={state === "granted"
+      style={isError
+        ? { background: "rgba(255,82,82,0.12)", color: "#ff5252", border: "1px solid rgba(255,82,82,0.2)" }
+        : state === "granted"
         ? { background: "rgba(0,230,118,0.12)", color: "#00e676", border: "1px solid rgba(0,230,118,0.2)" }
         : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }
       }
-      title={state === "granted" ? "Tắt thông báo" : "Bật thông báo"}
+      title={isError ? "Bật thông báo thất bại" : state === "granted" ? "Tắt thông báo" : "Bật thông báo"}
     >
-      {state === "granted" ? <Bell size={13} /> : <BellOff size={13} />}
-      {state === "granted" ? "Thông báo bật" : "Bật thông báo"}
+      {isError ? <BellOff size={13} /> : state === "granted" ? <Bell size={13} /> : <BellOff size={13} />}
+      {isError ? "Thất bại!" : state === "granted" ? "Thông báo bật" : "Bật thông báo"}
     </button>
   )
 }

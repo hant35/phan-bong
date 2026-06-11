@@ -13,7 +13,7 @@ import { flagUrl, formatDateTimeParts } from "@/lib/format"
 
 const BET_TYPES = [
   { id: "ah", label: "Kèo chấp", emoji: "⚖️", enabled: true },
-  { id: "ou", label: "Tài / Xỉu", emoji: "📊", enabled: true },
+  { id: "ou", label: "Tổng bàn thắng", emoji: "📊", enabled: true },
   { id: "exact", label: "Tỉ số", emoji: "🎯", enabled: true },
 ]
 
@@ -34,12 +34,23 @@ interface Match {
   myPick?: { betType: string; side?: string | null; homeScore?: number | null; awayScore?: number | null; confidence: number; result?: string | null; points: number } | null
 }
 
-export function MatchDetailView({ match, currentUserId, commentCount, isInGroup }: { match: Match; currentUserId: string; commentCount: number; isInGroup: boolean }) {
+export function MatchDetailView({ match, currentUserId, commentCount, isInGroup, userGroups }: {
+  match: Match; currentUserId: string; commentCount: number; isInGroup: boolean
+  userGroups: { id: string; name: string }[]
+}) {
   const router = useRouter()
   const toast = useToast()
   const searchParams = useSearchParams()
   const backUrl = searchParams.get("from") ?? "/matches"
   const backLabel = backUrl.startsWith("/groups/") ? "← Hội" : "← Lịch trận"
+
+  // Xác định groupId: ưu tiên từ context URL, fallback sang group đầu tiên
+  const groupIdFromUrl = backUrl.startsWith("/groups/") ? backUrl.split("/groups/")[1].split("/")[0] : null
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(
+    groupIdFromUrl ?? (userGroups.length === 1 ? userGroups[0].id : null)
+  )
+  const showGroupPicker = !selectedGroupId && userGroups.length > 1
+
   const [tab, setTab] = useState<"pick" | "info" | "group">("pick")
   const [betType, setBetType] = useState(match.myPick?.betType ?? "ah")
   const [pick, setPick] = useState<string | null>(match.myPick?.side ?? null)
@@ -55,10 +66,11 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
   const confidenceLabels = ["", "Đoán đại 😅", "Hên xui 🤷", "Bình thường ×1.0", "Khá tự tin ×1.5", "Chắc như đinh 🔥×2.0"]
 
   async function submit() {
+    if (!selectedGroupId) { setError("Chọn hội muốn đoán trước"); return }
     setSubmitting(true)
     setError(null)
     try {
-      const body: any = { matchId: match.id, betType, confidence }
+      const body: Record<string, unknown> = { matchId: match.id, groupId: selectedGroupId, betType, confidence }
       if (betType === "exact") { body.homeScore = homeScore; body.awayScore = awayScore }
       else body.side = pick
       const res = await fetch("/api/predictions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
@@ -191,6 +203,35 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
       {/* Pick */}
       {tab === "pick" && (
         <div className="space-y-4">
+          {/* Group picker khi user ở nhiều hội và không có context URL */}
+          {showGroupPicker && isInGroup && !isLocked && (
+            <div className="glass rounded-2xl p-4 space-y-3">
+              <p className="text-sm font-bold text-white/60">Chọn hội để đặt kèo:</p>
+              <div className="grid grid-cols-1 gap-2">
+                {userGroups.map(g => (
+                  <button key={g.id} onClick={() => setSelectedGroupId(g.id)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all hover:scale-[1.01]"
+                    style={{ background: "rgba(0,230,118,0.06)", border: "1px solid rgba(0,230,118,0.15)" }}>
+                    <span className="text-xl">🏟️</span>
+                    <span className="font-semibold text-white text-sm">{g.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Hiện group đang đoán (khi đã chọn và có nhiều hội) */}
+          {selectedGroupId && userGroups.length > 1 && !isLocked && !submitted && (
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs text-white/30">
+                Đoán cho: <span className="text-white/60 font-semibold">{userGroups.find(g => g.id === selectedGroupId)?.name}</span>
+              </span>
+              <button onClick={() => setSelectedGroupId(null)} className="text-xs text-white/25 hover:text-white/50 transition-colors underline">
+                Đổi hội
+              </button>
+            </div>
+          )}
+
           {!isInGroup && !isLocked ? (
             <div className="glass rounded-2xl p-6 text-center space-y-4">
               <div className="text-4xl">🏟️</div>
@@ -225,7 +266,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
                   <p className="font-bold text-[#00e676]">✅ Đã đoán xong</p>
                   <p className="text-sm text-white/40 mt-1">
                     {betType === "exact" ? `Tỉ số: ${homeScore}–${awayScore}` :
-                     betType === "ou" ? `Tài/Xỉu → ${pick === "over" ? "Tài" : "Xỉu"}` :
+                     betType === "ou" ? `Tổng bàn thắng → ${pick === "over" ? "Trên" : "Dưới"}` :
                      `Kèo → ${pick === "home" ? match.homeTeam : pick === "away" ? match.awayTeam : "Hòa"}`}
                   </p>
                   <p className="text-xs text-white/45 mt-1">
@@ -293,7 +334,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
               {betType === "ou" && match.ouLine != null && (
                 <div className="px-3 py-2.5 rounded-xl text-xs text-white/50 leading-relaxed"
                   style={{ background: "rgba(0,188,212,0.05)", border: "1px solid rgba(0,188,212,0.1)" }}>
-                  <span className="text-[#00bcd4] font-bold">📊 Tài/Xỉu {match.ouLine}:</span>{" "}
+                  <span className="text-[#00bcd4] font-bold">📊 Tổng bàn thắng {match.ouLine}:</span>{" "}
                   Chọn <strong className="text-white/70">Tài</strong> nếu tổng số bàn thắng cả hai đội nhiều hơn {match.ouLine}. Chọn <strong className="text-white/70">Xỉu</strong> nếu ít hơn hoặc bằng {match.ouLine} bàn.
                 </div>
               )}
@@ -301,8 +342,8 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
               {betType === "ou" && (
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { id: "over", label: "Tài", sub: `Hơn ${match.ouLine}`, emoji: "📈", color: "#00e676" },
-                    { id: "under", label: "Xỉu", sub: `Ít hơn ${match.ouLine}`, emoji: "📉", color: "#ff5252" },
+                    { id: "over", label: "Trên", sub: `Hơn ${match.ouLine}`, emoji: "📈", color: "#00e676" },
+                    { id: "under", label: "Dưới", sub: `Ít hơn ${match.ouLine}`, emoji: "📉", color: "#ff5252" },
                   ].map(opt => (
                     <button key={opt.id} onClick={() => setPick(opt.id)}
                       className="py-5 rounded-2xl border text-center transition-all"
@@ -430,7 +471,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup 
             <div className="grid grid-cols-2 gap-2">
               {[
                 { type: "Kèo chấp", base: 10 },
-                { type: "Tài / Xỉu", base: 8 },
+                { type: "Tổng bàn thắng", base: 8 },
                 { type: "Tỉ số chính xác", base: 30, hot: true },
               ].map(r => (
                 <div key={r.type} className="rounded-xl p-2.5 relative"
@@ -618,16 +659,16 @@ function OddsExplainer({ homeTeam, awayTeam, ahLine, ouLine }: {
     if (isHalf) {
       return {
         summary: `Mốc ${line} bàn — không có hòa, rõ ràng thắng/thua.`,
-        over: `Tổng bàn ≥ ${ceil} → Tài thắng. Ví dụ: 2-1 (3 bàn), 3-0 (3 bàn)...`,
-        under: `Tổng bàn ≤ ${ceil - 1} → Xỉu thắng. Ví dụ: 1-0 (1 bàn), 0-0 (0 bàn)...`,
+        over: `Tổng bàn ≥ ${ceil} → Trên thắng. Ví dụ: 2-1 (3 bàn), 3-0 (3 bàn)...`,
+        under: `Tổng bàn ≤ ${ceil - 1} → Dưới thắng. Ví dụ: 1-0 (1 bàn), 0-0 (0 bàn)...`,
       }
     }
 
     if (isWhole) {
       return {
         summary: `Mốc ${line} bàn — đúng ${line} bàn thì hoàn xu.`,
-        over: `Tổng bàn ≥ ${line + 1} → Tài thắng.`,
-        under: `Tổng bàn ≤ ${line - 1} → Xỉu thắng.`,
+        over: `Tổng bàn ≥ ${line + 1} → Trên thắng.`,
+        under: `Tổng bàn ≤ ${line - 1} → Dưới thắng.`,
         draw: `Tổng bàn = ${line} → Hoàn xu cho cả hai.`,
       }
     }
@@ -637,8 +678,8 @@ function OddsExplainer({ homeTeam, awayTeam, ahLine, ouLine }: {
     const upper = Math.ceil(line * 2) / 2
     return {
       summary: `Mốc ${line} bàn — kèo nửa-nửa (½ tiền theo ${lower}, ½ tiền theo ${upper}).`,
-      over: `Tổng bàn ≥ ${Math.ceil(upper)} → Tài thắng full. Tổng = ${Math.ceil(lower)} → Tài thắng nửa.`,
-      under: `Tổng bàn ≤ ${Math.floor(lower)} → Xỉu thắng full. Tổng = ${Math.ceil(lower)} → Xỉu thắng nửa.`,
+      over: `Tổng bàn ≥ ${Math.ceil(upper)} → Trên thắng full. Tổng = ${Math.ceil(lower)} → Trên thắng nửa.`,
+      under: `Tổng bàn ≤ ${Math.floor(lower)} → Dưới thắng full. Tổng = ${Math.ceil(lower)} → Dưới thắng nửa.`,
     }
   }
 
@@ -686,16 +727,16 @@ function OddsExplainer({ homeTeam, awayTeam, ahLine, ouLine }: {
             <span className="text-xs font-black px-2 py-0.5 rounded-md" style={{ background: "rgba(0,188,212,0.15)", color: "#00bcd4" }}>
               T/X {ouLine}
             </span>
-            <span className="text-xs font-bold text-white/60">Tài / Xỉu (O/U)</span>
+            <span className="text-xs font-bold text-white/60">Tổng bàn thắng (O/U)</span>
           </div>
           <p className="text-sm text-white/50 leading-relaxed">{ou.summary}</p>
           <div className="space-y-1.5">
             <div className="flex items-start gap-2">
-              <span className="text-[10px] mt-0.5 px-1.5 py-0.5 rounded font-bold bg-red-500/15 text-red-400 flex-shrink-0">Tài</span>
+              <span className="text-[10px] mt-0.5 px-1.5 py-0.5 rounded font-bold bg-red-500/15 text-red-400 flex-shrink-0">Trên</span>
               <p className="text-xs text-white/40 leading-relaxed">{ou.over}</p>
             </div>
             <div className="flex items-start gap-2">
-              <span className="text-[10px] mt-0.5 px-1.5 py-0.5 rounded font-bold bg-purple-500/15 text-purple-400 flex-shrink-0">Xỉu</span>
+              <span className="text-[10px] mt-0.5 px-1.5 py-0.5 rounded font-bold bg-purple-500/15 text-purple-400 flex-shrink-0">Dưới</span>
               <p className="text-xs text-white/40 leading-relaxed">{ou.under}</p>
             </div>
             {ou.draw && (

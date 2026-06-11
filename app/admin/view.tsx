@@ -433,7 +433,7 @@ export function AdminView({
                     </div>
                     {/* Tài xỉu */}
                     <div>
-                      <label className="text-[10px] text-white/30 uppercase font-bold block mb-1">Tài/Xỉu (O/U)</label>
+                      <label className="text-[10px] text-white/30 uppercase font-bold block mb-1">Tổng bàn thắng (O/U)</label>
                       <input type="number" step="0.25"
                         value={edits.ouLine ?? m.ouLine ?? ""}
                         onChange={e => editMatch(m.id, "ouLine", e.target.value ? parseFloat(e.target.value) : null)}
@@ -1112,7 +1112,7 @@ export function AdminView({
                       <span className="text-base">📊</span>
                       <div>
                         <div className="text-sm font-bold text-white">2.5</div>
-                        <div className="text-xs text-white/40">Phổ biến nhất. Tổng bàn 3+ = Tài thắng. Tổng bàn 0-2 = Xỉu thắng. Không có hòa.</div>
+                        <div className="text-xs text-white/40">Phổ biến nhất. Tổng bàn 3+ = Trên thắng. Tổng bàn 0-2 = Dưới thắng. Không có hòa.</div>
                       </div>
                     </div>
                     <div className="flex items-start gap-3 p-3 rounded-xl bg-white/3">
@@ -1307,7 +1307,7 @@ export function AdminView({
                     className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-[#00e676] outline-none" placeholder="-0.5" />
                 </div>
                 <div>
-                  <label className="text-xs text-white/40 mb-1 block">Tài/Xỉu (O/U)</label>
+                  <label className="text-xs text-white/40 mb-1 block">Tổng bàn thắng (O/U)</label>
                   <input value={newMatch.ouLine} onChange={e => setNewMatch(p => ({ ...p, ouLine: e.target.value }))}
                     className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-[#00e676] outline-none" placeholder="2.5" />
                 </div>

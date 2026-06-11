@@ -58,8 +58,8 @@ export default async function HomePage() {
   const myWeekCorrect = await prisma.prediction.count({ where: { userId: user.id, result: "win" } })
   const winRate = myWeekTotal > 0 ? Math.round(myWeekCorrect / myWeekTotal * 100) : 0
 
-  const hm = { flag: nextMatch.homeFlag, color: nextMatch.homeColor }
-  const am = { flag: nextMatch.awayFlag, color: nextMatch.awayColor }
+  const hm = nextMatch ? { flag: nextMatch.homeFlag, color: nextMatch.homeColor } : null
+  const am = nextMatch ? { flag: nextMatch.awayFlag, color: nextMatch.awayColor } : null
 
   const hasGroup = myGroups.length > 0
 
@@ -96,55 +96,64 @@ export default async function HomePage() {
         </Link>
       </div>
 
-      <Link href={`/matches/${nextMatch.id}`}>
-        <div className="relative rounded-3xl overflow-hidden hover:scale-[1.005] transition-transform" style={{
-          background: `linear-gradient(135deg, ${hm.color ?? "#1a1d2e"}40 0%, #0f1117 50%, ${am.color ?? "#1a1d2e"}40 100%)`,
-          border: "1px solid rgba(255,255,255,0.08)"
-        }}>
-          <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 pointer-events-none"
-            style={{ background: "radial-gradient(circle, #00e676 0%, transparent 70%)", transform: "translate(30%, -30%)" }} />
-          <div className="relative p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Zap size={13} style={{ color: "#00e676" }} />
-              <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: "#00e676" }}>
-                Trận tiếp theo · Bạn chưa đoán
-              </span>
-            </div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3 flex-1">
-                <div className="relative w-14 h-10 rounded-xl overflow-hidden ring-2 ring-white/10 shadow-lg flex-shrink-0">
-                  <Image src={flagUrl(hm.flag)} alt={nextMatch.homeTeam} fill className="object-cover" unoptimized />
+      {nextMatch && hm && am ? (
+        <Link href={`/matches/${nextMatch.id}`}>
+          <div className="relative rounded-3xl overflow-hidden hover:scale-[1.005] transition-transform" style={{
+            background: `linear-gradient(135deg, ${hm.color ?? "#1a1d2e"}40 0%, #0f1117 50%, ${am.color ?? "#1a1d2e"}40 100%)`,
+            border: "1px solid rgba(255,255,255,0.08)"
+          }}>
+            <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 pointer-events-none"
+              style={{ background: "radial-gradient(circle, #00e676 0%, transparent 70%)", transform: "translate(30%, -30%)" }} />
+            <div className="relative p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Zap size={13} style={{ color: "#00e676" }} />
+                <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: "#00e676" }}>
+                  Trận tiếp theo · Bạn chưa đoán
+                </span>
+              </div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="relative w-14 h-10 rounded-xl overflow-hidden ring-2 ring-white/10 shadow-lg flex-shrink-0">
+                    <Image src={flagUrl(hm.flag)} alt={nextMatch.homeTeam} fill className="object-cover" unoptimized />
+                  </div>
+                  <div>
+                    <div className="font-black text-white text-base">{nextMatch.homeTeam}</div>
+                    <div className="text-[10px] text-white/30">Chủ nhà</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-black text-white text-base">{nextMatch.homeTeam}</div>
-                  <div className="text-[10px] text-white/30">Chủ nhà</div>
+                <div className="text-center px-3"><div className="text-white/40 font-black text-xl">VS</div></div>
+                <div className="flex items-center gap-3 flex-1 justify-end">
+                  <div className="text-right">
+                    <div className="font-black text-white text-base">{nextMatch.awayTeam}</div>
+                    <div className="text-[10px] text-white/30">Khách</div>
+                  </div>
+                  <div className="relative w-14 h-10 rounded-xl overflow-hidden ring-2 ring-white/10 shadow-lg flex-shrink-0">
+                    <Image src={flagUrl(am.flag)} alt={nextMatch.awayTeam} fill className="object-cover" unoptimized />
+                  </div>
                 </div>
               </div>
-              <div className="text-center px-3"><div className="text-white/40 font-black text-xl">VS</div></div>
-              <div className="flex items-center gap-3 flex-1 justify-end">
-                <div className="text-right">
-                  <div className="font-black text-white text-base">{nextMatch.awayTeam}</div>
-                  <div className="text-[10px] text-white/30">Khách</div>
+              <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                <div className="flex items-center gap-2">
+                  <Clock size={13} className="text-orange-400" />
+                  <span className="font-black text-orange-400 text-sm">{formatCountdown(nextMatch.kickoffAt)}</span>
+                  <span className="text-xs text-white/30">· {formatDateTimeParts(nextMatch.kickoffAt).time} · {formatDateTimeParts(nextMatch.kickoffAt).date}</span>
                 </div>
-                <div className="relative w-14 h-10 rounded-xl overflow-hidden ring-2 ring-white/10 shadow-lg flex-shrink-0">
-                  <Image src={flagUrl(am.flag)} alt={nextMatch.awayTeam} fill className="object-cover" unoptimized />
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
+                  style={{ background: "linear-gradient(135deg, #00e676, #00bcd4)", color: "#0f1117" }}>
+                  Phán ngay <ArrowRight size={12} />
                 </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between pt-3 border-t border-white/10">
-              <div className="flex items-center gap-2">
-                <Clock size={13} className="text-orange-400" />
-                <span className="font-black text-orange-400 text-sm">{formatCountdown(nextMatch.kickoffAt)}</span>
-                <span className="text-xs text-white/30">· {formatDateTimeParts(nextMatch.kickoffAt).time} · {formatDateTimeParts(nextMatch.kickoffAt).date}</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
-                style={{ background: "linear-gradient(135deg, #00e676, #00bcd4)", color: "#0f1117" }}>
-                Phán ngay <ArrowRight size={12} />
               </div>
             </div>
           </div>
+        </Link>
+      ) : (
+        <div className="rounded-3xl p-6 text-center"
+          style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)" }}>
+          <div className="text-3xl mb-2">⚽</div>
+          <p className="text-sm font-bold text-white/40">Chưa có trận nào sắp diễn ra</p>
+          <p className="text-xs text-white/20 mt-1">Admin sẽ thêm lịch thi đấu sớm thôi!</p>
         </div>
-      </Link>
+      )}
 
       {liveMatches.length > 0 && (
         <div>
