@@ -8,10 +8,12 @@ export default async function GroupAdminPage({ params }: { params: Promise<{ id:
   const user = await getCurrentUser()
   if (!user) redirect("/login")
 
+  const isSuperAdmin = user.role === "superadmin"
+
   const membership = await prisma.groupMember.findUnique({
     where: { userId_groupId: { userId: user.id, groupId: id } },
   })
-  if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+  if (!isSuperAdmin && (!membership || (membership.role !== "owner" && membership.role !== "admin"))) {
     redirect(`/groups/${id}`)
   }
 
@@ -76,7 +78,7 @@ export default async function GroupAdminPage({ params }: { params: Promise<{ id:
   return <GroupAdminView
     group={{ id: group.id, name: group.name, visibility: group.visibility, inviteCode: group.inviteCode }}
     currentUserId={user.id}
-    myRole={membership.role as "owner" | "admin"}
+    myRole={(isSuperAdmin ? (membership?.role ?? "owner") : membership!.role) as "owner" | "admin"}
     members={members.map(m => ({
       userId: m.userId,
       name: m.user.name,
