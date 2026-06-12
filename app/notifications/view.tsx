@@ -15,7 +15,6 @@ const TYPE_EMOJI: Record<string, string> = {
   streak: "🔥",
   overtaken: "📈",
   badge: "🏅",
-  comment: "💬",
   prediction: "🎯",
   welcome: "👋",
 }

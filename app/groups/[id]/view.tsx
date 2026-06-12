@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, Users, Lock, Globe, Crown, Copy, Check, TrendingUp, TrendingDown, Minus, Flame, Activity, Newspaper, Sparkles, Bell, Send, X, CheckCircle2, AlertCircle, Zap, Loader2, Settings, Shield } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagUrl, formatDateTimeParts, timeAgo } from "@/lib/format"
-import { GroupChat } from "@/components/group-chat"
 import { HopeStarPicker } from "@/components/hope-star-picker"
 import { DEFAULT_HOPE_STAR } from "@/lib/hope-star"
 
@@ -587,8 +586,6 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
             </div>
           </div>
 
-          {/* Chat hội */}
-          <GroupChat groupId={group.id} currentUserId={currentUserId} />
         </div>
       )}
 

@@ -10,7 +10,7 @@ import { getLeaderboardFromGroupPoints, sumUserGroupPoints } from "@/lib/group-p
 
 const activityColors: Record<string, string> = {
   pick: "#ec4899", win: "#00e676", join: "#00bcd4", badge: "#ffd700",
-  loss: "#ff5252", comment: "#7c3aed", rank: "#00e676",
+  loss: "#ff5252", rank: "#00e676",
 }
 
 export default async function HomePage() {

@@ -234,7 +234,13 @@ export function MatchDetailView({ match, currentUserId, isInGroup, userGroups }:
             </div>
           )}
 
-          {!isInGroup && !isLocked ? (
+          {match.ahLine == null && match.ouLine == null && !isLocked ? (
+            <div className="glass rounded-2xl p-6 text-center space-y-2">
+              <div className="text-4xl">⏳</div>
+              <p className="font-black text-white">Chưa có kèo</p>
+              <p className="text-sm text-white/40">Ban tổ chức chưa mở kèo cho trận này. Quay lại sau để dự đoán.</p>
+            </div>
+          ) : !isInGroup && !isLocked ? (
             <div className="glass rounded-2xl p-6 text-center space-y-4">
               <div className="text-4xl">🏟️</div>
               <div>
@@ -412,7 +418,7 @@ export function MatchDetailView({ match, currentUserId, isInGroup, userGroups }:
                   ? { background: "linear-gradient(135deg, #00e676, #00bcd4)", color: "#0f1117" }
                   : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)" }}>
                 {submitting ? <Loader2 size={18} className="animate-spin"/> : <Zap size={18} />}
-                Xác nhận đoán
+                {submitting ? "Đang gửi..." : "Xác nhận đoán"}
               </button>
             </>
           )}
