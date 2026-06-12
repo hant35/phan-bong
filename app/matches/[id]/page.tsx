@@ -25,8 +25,6 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   const away = m.predictions.filter(p => p.side === "away" || (p.betType === "exact" && (p.homeScore ?? 0) < (p.awayScore ?? 0))).length
   const draw = m.predictions.length - home - away
 
-  const commentCount = await prisma.comment.count({ where: { matchId: id } })
-
   const userMemberships = await prisma.groupMember.findMany({
     where: { userId: user.id },
     orderBy: { joinedAt: "asc" },
@@ -74,7 +72,6 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       <MatchDetailView
         match={data}
         currentUserId={user.id}
-        commentCount={commentCount}
         isInGroup={isInGroup}
         userGroups={userGroups}
       />

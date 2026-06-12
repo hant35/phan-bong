@@ -6,7 +6,6 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, Lock, BarChart3, Users, Zap, Cloud, MapPin, Trophy, Flame, Info, Loader2 } from "lucide-react"
 import { LivePanel } from "@/components/live-panel"
-import { MatchChatBar } from "@/components/match-chat"
 import { useToast } from "@/components/toast"
 import { HopeStarPicker } from "@/components/hope-star-picker"
 import { cn } from "@/lib/utils"
@@ -36,8 +35,8 @@ interface Match {
   myPick?: { betType: string; side?: string | null; homeScore?: number | null; awayScore?: number | null; confidence: number; result?: string | null; points: number } | null
 }
 
-export function MatchDetailView({ match, currentUserId, commentCount, isInGroup, userGroups }: {
-  match: Match; currentUserId: string; commentCount: number; isInGroup: boolean
+export function MatchDetailView({ match, currentUserId, isInGroup, userGroups }: {
+  match: Match; currentUserId: string; isInGroup: boolean
   userGroups: { id: string; name: string }[]
 }) {
   const router = useRouter()
@@ -561,10 +560,6 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup,
         </div>
       )}
 
-      {/* Chat — always visible */}
-      <div className="mt-5">
-        <MatchChatBar matchId={match.id} currentUserId={currentUserId} commentCount={commentCount} />
-      </div>
     </div>
   )
 }
