@@ -5,6 +5,7 @@ import { ArrowRight, Zap, Flame, TrendingUp, Clock, Users, Trophy, ChevronRight,
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
 import { getDefaultGroupId } from "@/lib/default-group"
+import { GROUPS_LIST_HREF } from "@/lib/groups-nav"
 import { flagUrl, formatCountdown, formatDateTimeParts, timeAgo } from "@/lib/format"
 import { LiveMatchBar } from "@/components/live-match-card"
 import { getLeaderboardFromGroupPoints, sumUserGroupPoints } from "@/lib/group-points"
@@ -73,7 +74,7 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col gap-8">
       {myGroups.length === 0 && (
-        <Link href="/groups">
+        <Link href={GROUPS_LIST_HREF}>
           <div className="rounded-2xl p-4 flex items-center gap-4 hover:scale-[1.01] transition-transform"
             style={{ background: "linear-gradient(135deg, rgba(255,152,0,0.12), rgba(255,87,34,0.08))", border: "1px solid rgba(255,152,0,0.25)" }}>
             <div className="text-3xl flex-shrink-0">🏟️</div>
@@ -271,7 +272,7 @@ export default async function HomePage() {
                 <Users size={14} className="text-[#00bcd4]" />
                 <span className="text-xs font-black text-white/60 uppercase tracking-widest">Hội của tôi</span>
               </div>
-              <Link href="/groups" className="text-[10px] text-white/40 hover:text-white/70">Tất cả</Link>
+              <Link href={GROUPS_LIST_HREF} className="text-[10px] text-white/40 hover:text-white/70">Tất cả</Link>
             </div>
             <div className="flex flex-col gap-2.5">
               {myGroupsWithRank.map(g => (

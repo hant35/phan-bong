@@ -15,7 +15,7 @@ const STEPS = [
     emoji: "🏟️",
     title: "Bước 1: Vào hội",
     desc: "Tạo hoặc tham gia một hội bằng mã mời. Chỉ khi vào hội bạn mới có thể đặt kèo và theo dõi bảng xếp hạng nội bộ.",
-    cta: { label: "Tạo / Tham gia hội", href: "/groups" },
+    cta: { label: "Tạo / Tham gia hội", href: "/groups?list=1" },
   },
   {
     emoji: "🎯",
@@ -27,7 +27,7 @@ const STEPS = [
     emoji: "🏆",
     title: "Bước 3: Ganh đua",
     desc: "Đoán đúng kiếm xu, leo bảng xếp hạng trong hội. Streak càng dài càng tốt. Người nhiều xu nhất cuối giải lên ngôi!",
-    cta: { label: "Bắt đầu thôi!", href: "/groups" },
+    cta: { label: "Bắt đầu thôi!", href: "/groups?list=1" },
   },
 ]
 

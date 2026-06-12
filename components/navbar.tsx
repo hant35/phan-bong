@@ -2,16 +2,10 @@ import Link from "next/link"
 import { Bell, Users, Calendar, Home, History, Shield } from "lucide-react"
 import { getCurrentUser } from "@/lib/auth"
 import { getDefaultGroupId } from "@/lib/default-group"
+import { groupsMenuHref } from "@/lib/groups-nav"
 import { prisma } from "@/lib/db"
 import { NavbarLinks } from "./navbar-links"
 import { PushToggle } from "./pwa-init"
-
-const navItems = [
-  { href: "/", label: "Trang chủ", icon: "Home" as const, exact: true },
-  { href: "/matches", label: "Lịch trận", icon: "Calendar" as const },
-  { href: "/groups", label: "Hội", icon: "Users" as const },
-  { href: "/history", label: "Lịch sử", icon: "History" as const },
-]
 
 export async function Navbar() {
   const user = await getCurrentUser()
@@ -22,6 +16,13 @@ export async function Navbar() {
   })
 
   const defaultGroupId = await getDefaultGroupId(user.id)
+
+  const navItems = [
+    { href: "/", label: "Trang chủ", icon: "Home" as const, exact: true },
+    { href: "/matches", label: "Lịch trận", icon: "Calendar" as const },
+    { href: groupsMenuHref(defaultGroupId), label: "Hội", icon: "Users" as const, matchPrefix: "/groups" },
+    { href: "/history", label: "Lịch sử", icon: "History" as const },
+  ]
   const unpickedCount = defaultGroupId ? await prisma.match.count({
     where: {
       status: "scheduled",

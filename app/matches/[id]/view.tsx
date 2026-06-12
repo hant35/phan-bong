@@ -249,7 +249,7 @@ export function MatchDetailView({ match, currentUserId, isInGroup, userGroups }:
                 <p className="font-black text-white text-lg">Vào hội để dự đoán</p>
                 <p className="text-sm text-white/40 mt-1">Bạn cần tham gia ít nhất một hội mới có thể đặt kèo và ganh đua với bạn bè.</p>
               </div>
-              <Link href="/groups"
+              <Link href="/groups?list=1"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-[#0f1117] transition-all hover:scale-105"
                 style={{ background: "linear-gradient(135deg, #00e676, #00bcd4)" }}>
                 <Users size={15} /> Tìm hội hoặc tạo hội mới

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import { flagUrl, formatDateTimeParts, timeAgo } from "@/lib/format"
 import { HopeStarPicker } from "@/components/hope-star-picker"
 import { DEFAULT_HOPE_STAR } from "@/lib/hope-star"
+import { GROUPS_LIST_HREF } from "@/lib/groups-nav"
 
 const avatarGradients = [
   "linear-gradient(135deg, #ffd700, #ff8f00)",
@@ -156,7 +157,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
 
   return (
     <div>
-      <Link href="/groups" className="inline-flex items-center gap-1.5 text-sm text-white/30 hover:text-white/60 transition-colors mb-4">
+      <Link href={GROUPS_LIST_HREF} className="inline-flex items-center gap-1.5 text-sm text-white/30 hover:text-white/60 transition-colors mb-4">
         <ArrowLeft size={15} /> Hội của tôi
       </Link>
 
