@@ -10,7 +10,7 @@ import { MatchChatBar } from "@/components/match-chat"
 import { useToast } from "@/components/toast"
 import { HopeStarPicker } from "@/components/hope-star-picker"
 import { cn } from "@/lib/utils"
-import { DEFAULT_HOPE_STAR, hopeStarLabel } from "@/lib/hope-star"
+import { DEFAULT_HOPE_STAR, hopeStarLabel, HOPE_STAR_WIN, HOPE_STAR_LOSS } from "@/lib/hope-star"
 import { flagUrl, formatDateTimeParts } from "@/lib/format"
 
 const BET_TYPES = [
@@ -453,13 +453,11 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup,
               <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#ffd700" }}>Ngôi sao hi vọng</span>
             </div>
             <div className="space-y-1.5">
-              {[
-                { star: 1, win: "+1", loss: "0" },
-                { star: 2, win: "+2", loss: "−1" },
-                { star: 3, win: "+3", loss: "−2" },
-                { star: 4, win: "+4", loss: "−4" },
-                { star: 5, win: "+5", loss: "−4" },
-              ].map(r => (
+              {([1, 2, 3, 4, 5] as const).map(star => {
+                const win = HOPE_STAR_WIN[star]
+                const loss = HOPE_STAR_LOSS[star]
+                const r = { star, win: `+${win}`, loss: loss === 0 ? "0" : `−${loss}` }
+                return (
                 <div key={r.star} className="flex items-center justify-between rounded-xl px-3 py-2"
                   style={{ background: "rgba(255,255,255,0.03)" }}>
                   <span className="text-xs font-bold text-white/50">{"⭐".repeat(r.star)}</span>
@@ -469,7 +467,7 @@ export function MatchDetailView({ match, currentUserId, commentCount, isInGroup,
                     Thua <strong className={r.loss === "0" ? "text-white/40" : "text-red-400"}>{r.loss}</strong>
                   </span>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
 
