@@ -128,6 +128,21 @@ async function applyHopeStarPoints(
   }
 }
 
+function normalizedMultiplier(multiplier: number | undefined): number {
+  return Math.max(1, Math.round(multiplier ?? 1))
+}
+
+function applyPointsMultiplier(delta: number, multiplier: number): number {
+  return delta * multiplier
+}
+
+function withMultiplierReason(reason: string, baseDelta: number, multiplier: number, pointsDelta: number): string {
+  if (multiplier <= 1) return reason
+  const base = baseDelta > 0 ? `+${baseDelta}` : `${baseDelta}`
+  const final = pointsDelta > 0 ? `+${pointsDelta}` : `${pointsDelta}`
+  return `${reason} · Hệ số ×${multiplier}: ${base} → ${final} xu`
+}
+
 // ── Preview grading (for live matches — temporary) ──
 
 export async function previewGrading(matchId: string): Promise<GradingResult | null> {
@@ -163,7 +178,10 @@ export async function previewGrading(matchId: string): Promise<GradingResult | n
         ouLine: cfg.ouLine ?? match.ouLine,
       },
     )
-    details.push({ userId: pred.userId, name: pred.user.name, betType: pred.betType, result, reason })
+    const multiplier = normalizedMultiplier(cfg.pointsMultiplier)
+    const baseDelta = hopeStarDelta(pred.confidence, result)
+    const pointsDelta = applyPointsMultiplier(baseDelta, multiplier)
+    details.push({ userId: pred.userId, name: pred.user.name, betType: pred.betType, result, reason: withMultiplierReason(reason, baseDelta, multiplier, pointsDelta) })
     if (result === "win") wins++
     else losses++
   }
@@ -227,7 +245,9 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
       },
     )
 
-    const pointsDelta = hopeStarDelta(pred.confidence, result)
+    const multiplier = normalizedMultiplier(cfg.pointsMultiplier)
+    const baseDelta = hopeStarDelta(pred.confidence, result)
+    const pointsDelta = applyPointsMultiplier(baseDelta, multiplier)
 
     await prisma.prediction.update({
       where: { id: pred.id },
@@ -240,7 +260,7 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
     else losses++
     newlyGraded++
 
-    details.push({ userId: pred.userId, name: pred.user.name, betType: pred.betType, result, reason })
+    details.push({ userId: pred.userId, name: pred.user.name, betType: pred.betType, result, reason: withMultiplierReason(reason, baseDelta, multiplier, pointsDelta) })
   }
 
   // 2. Tìm thành viên chưa đoán theo từng hội (per-group skip)
