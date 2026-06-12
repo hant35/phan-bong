@@ -1,5 +1,6 @@
 import webpush from "web-push"
 import { prisma } from "./db"
+import type { PushPayload } from "./push-payload"
 import { normalizeVapidKey } from "./vapid"
 
 export type PushDeliveryResult = {
@@ -11,9 +12,49 @@ export type PushDeliveryResult = {
   debug?: string
 }
 
+const isProd = process.env.NODE_ENV === "production"
 let vapidReady = false
 let vapidChecked = false
 let vapidError: string | null = null
+let vapidMisconfigAlerted = false
+
+function maskEndpoint(endpoint: string): string {
+  if (!isProd) return endpoint.slice(0, 60)
+  try {
+    const host = new URL(endpoint).hostname
+    return `${host}:…${endpoint.slice(-8)}`
+  } catch {
+    return `…${endpoint.slice(-8)}`
+  }
+}
+
+function pushLog(level: "info" | "warn" | "error", message: string, meta?: Record<string, unknown>) {
+  const entry = meta ? { message, ...meta } : { message }
+  if (level === "error") console.error("[push]", entry)
+  else if (level === "warn") console.warn("[push]", entry)
+  else if (!isProd) console.log("[push]", entry)
+}
+
+function logPushMetrics(context: string, result: PushDeliveryResult) {
+  const metrics = {
+    event: "push_delivery",
+    context,
+    delivered: result.delivered,
+    failed: result.failed,
+    expired: result.expired,
+    total: result.total,
+    configured: result.configured,
+    ts: new Date().toISOString(),
+  }
+  if (!result.configured) {
+    if (!vapidMisconfigAlerted) {
+      vapidMisconfigAlerted = true
+      pushLog("error", "ALERT: VAPID chưa cấu hình — push không hoạt động", metrics)
+    }
+    return
+  }
+  pushLog("info", "metrics", metrics)
+}
 
 function initVapid(): boolean {
   if (vapidChecked) return vapidReady
@@ -21,14 +62,13 @@ function initVapid(): boolean {
 
   const { VAPID_EMAIL, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY } = process.env
 
-  // Debug: log key presence (not values)
-  console.log("[push] VAPID config check:", {
-    hasEmail: !!VAPID_EMAIL,
-    hasPublicKey: !!NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-    publicKeyLength: NEXT_PUBLIC_VAPID_PUBLIC_KEY?.length ?? 0,
-    hasPrivateKey: !!VAPID_PRIVATE_KEY,
-    privateKeyLength: VAPID_PRIVATE_KEY?.length ?? 0,
-  })
+  if (!isProd) {
+    pushLog("info", "VAPID config check", {
+      hasEmail: !!VAPID_EMAIL,
+      hasPublicKey: !!NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      hasPrivateKey: !!VAPID_PRIVATE_KEY,
+    })
+  }
 
   if (!VAPID_EMAIL || !NEXT_PUBLIC_VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
     vapidError = `Thiếu env: ${[
@@ -36,24 +76,19 @@ function initVapid(): boolean {
       !NEXT_PUBLIC_VAPID_PUBLIC_KEY && "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
       !VAPID_PRIVATE_KEY && "VAPID_PRIVATE_KEY",
     ].filter(Boolean).join(", ")}`
-    console.warn("[push]", vapidError)
+    pushLog("warn", vapidError)
     return false
   }
   try {
     const publicKey = normalizeVapidKey(NEXT_PUBLIC_VAPID_PUBLIC_KEY)
     const privateKey = normalizeVapidKey(VAPID_PRIVATE_KEY)
-    console.log("[push] Normalized keys:", {
-      publicKeyLength: publicKey.length,
-      privateKeyLength: privateKey.length,
-      publicKeyPrefix: publicKey.slice(0, 10) + "...",
-    })
     webpush.setVapidDetails(VAPID_EMAIL, publicKey, privateKey)
     vapidReady = true
-    console.log("[push] ✅ VAPID configured successfully")
+    if (!isProd) pushLog("info", "VAPID configured")
     return true
   } catch (err) {
     vapidError = `VAPID init error: ${(err as Error).message}`
-    console.error("[push]", vapidError)
+    pushLog("error", vapidError)
     return false
   }
 }
@@ -64,7 +99,11 @@ function getVapidError(): string {
 
 type PushSub = { id: string; endpoint: string; p256dh: string; auth: string }
 
-async function deliverToSubscriptions(subs: PushSub[], payload: string): Promise<PushDeliveryResult> {
+async function deliverToSubscriptions(
+  subs: PushSub[],
+  payload: PushPayload,
+  context: string,
+): Promise<PushDeliveryResult> {
   const configured = initVapid()
   const result: PushDeliveryResult = {
     delivered: 0,
@@ -76,7 +115,7 @@ async function deliverToSubscriptions(subs: PushSub[], payload: string): Promise
 
   if (!configured) {
     result.debug = getVapidError()
-    console.warn("[push] Bỏ qua gửi push:", result.debug)
+    logPushMetrics(context, result)
     return result
   }
 
@@ -85,60 +124,59 @@ async function deliverToSubscriptions(subs: PushSub[], payload: string): Promise
     return result
   }
 
-  console.log(`[push] Đang gửi tới ${subs.length} thiết bị...`)
+  const payloadJson = JSON.stringify(payload)
 
   await Promise.all(
     subs.map(async (sub) => {
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          payload,
+          payloadJson,
         )
         result.delivered++
-        console.log("[push] ✅ Gửi OK:", sub.endpoint.slice(0, 60))
       } catch (err) {
         const e = err as { statusCode?: number; body?: string; message?: string }
         if (e.statusCode === 410 || e.statusCode === 404) {
           result.expired++
-          console.warn("[push] ⚠️ Subscription hết hạn (410/404):", sub.endpoint.slice(0, 60))
+          pushLog("warn", "Subscription hết hạn", { endpoint: maskEndpoint(sub.endpoint), statusCode: e.statusCode })
           await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {})
         } else {
           result.failed++
-          console.error("[push] ❌ Gửi thất bại:", {
+          pushLog("error", "Gửi thất bại", {
             statusCode: e.statusCode,
-            body: typeof e.body === "string" ? e.body.slice(0, 200) : e.body,
             message: e.message,
-            endpoint: sub.endpoint.slice(0, 80),
+            endpoint: maskEndpoint(sub.endpoint),
+            ...(isProd ? {} : { body: typeof e.body === "string" ? e.body.slice(0, 200) : e.body }),
           })
         }
       }
     }),
   )
 
-  const summary = `delivered=${result.delivered} failed=${result.failed} expired=${result.expired} total=${result.total}`
-  console.log(`[push] Kết quả: ${summary}`)
-  result.debug = summary
-
+  result.debug = `delivered=${result.delivered} failed=${result.failed} expired=${result.expired} total=${result.total}`
+  logPushMetrics(context, result)
   return result
 }
 
 export async function sendPushToUser(
   userId: string,
-  title: string,
-  body: string,
-  url = "/",
+  payload: PushPayload,
 ): Promise<PushDeliveryResult> {
   const subs = await prisma.pushSubscription.findMany({ where: { userId } })
-  console.log(`[push] sendPushToUser userId=${userId} subs=${subs.length} title="${title}"`)
-  return deliverToSubscriptions(subs, JSON.stringify({ title, body, url }))
+  return deliverToSubscriptions(subs, payload, `user:${userId}`)
 }
 
-export async function sendPushToAll(
+export async function sendPushToAll(payload: PushPayload): Promise<PushDeliveryResult> {
+  const subs = await prisma.pushSubscription.findMany()
+  return deliverToSubscriptions(subs, payload, "broadcast")
+}
+
+/** Tương thích test route — title/body/url đơn giản. */
+export async function sendPushToUserSimple(
+  userId: string,
   title: string,
   body: string,
   url = "/",
 ): Promise<PushDeliveryResult> {
-  const subs = await prisma.pushSubscription.findMany()
-  console.log(`[push] sendPushToAll subs=${subs.length} title="${title}"`)
-  return deliverToSubscriptions(subs, JSON.stringify({ title, body, url }))
+  return sendPushToUser(userId, { title, body, url, tag: "test" })
 }

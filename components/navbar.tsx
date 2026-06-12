@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Bell, Users, Calendar, Home, History, Shield } from "lucide-react"
 import { getCurrentUser } from "@/lib/auth"
+import { getDefaultGroupId } from "@/lib/default-group"
 import { prisma } from "@/lib/db"
 import { NavbarLinks } from "./navbar-links"
 import { PushToggle } from "./pwa-init"
@@ -20,18 +21,13 @@ export async function Navbar() {
     where: { userId: user.id, read: false },
   })
 
-  // Dùng hội đầu tiên của user để đếm unpicked (group-specific predictions)
-  const firstMembership = await prisma.groupMember.findFirst({
-    where: { userId: user.id },
-    orderBy: { joinedAt: "asc" },
-    select: { groupId: true },
-  })
-  const unpickedCount = firstMembership ? await prisma.match.count({
+  const defaultGroupId = await getDefaultGroupId(user.id)
+  const unpickedCount = defaultGroupId ? await prisma.match.count({
     where: {
       status: "scheduled",
       kickoffAt: { gt: new Date() },
       OR: [{ ahLine: { not: null } }, { ouLine: { not: null } }],
-      predictions: { none: { userId: user.id, groupId: firstMembership.groupId } },
+      predictions: { none: { userId: user.id, groupId: defaultGroupId } },
     },
   }) : 0
 
@@ -52,7 +48,10 @@ export async function Navbar() {
 
           <NavbarLinks items={navItems} badges={{ "/matches": unpickedCount }} />
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="md:hidden">
+              <PushToggle compact />
+            </div>
             <div className="hidden md:block">
               <PushToggle />
             </div>

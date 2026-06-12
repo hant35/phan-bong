@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { sendPushToUser } from "@/lib/push"
+import { notifyUser } from "@/lib/notify"
 import { gradeMatch } from "@/lib/grading"
+import { sendKickoffReminders } from "@/lib/kickoff-reminders"
+import { notifyMatchResults } from "@/lib/result-notify"
 import { syncFootballData } from "@/lib/sync-sources"
 import { requireCronOrAdmin } from "@/lib/request-auth"
 
@@ -16,6 +18,14 @@ export async function GET(req: NextRequest) {
 
   const now = new Date()
   const results: string[] = []
+
+  // ── 0a. Nhắc trước kickoff (T-30p, T-5p) ──
+  try {
+    const reminderLog = await sendKickoffReminders(now)
+    results.push(...reminderLog)
+  } catch (e) {
+    results.push(`❌ Kickoff reminders failed: ${e instanceof Error ? e.message : String(e)}`)
+  }
 
   // ── 0. Đồng bộ từ Football-Data.org (API uy tín nhất) ──
   const fdKey = process.env.FOOTBALL_DATA_API_KEY
@@ -65,12 +75,14 @@ export async function GET(req: NextRequest) {
         select: { userId: true },
       })
       for (const p of predictors) {
-        await sendPushToUser(
-          p.userId,
-          `⚽ Trận đấu bắt đầu!`,
-          `${match.homeTeam} vs ${match.awayTeam} vừa bắt đầu`,
-          `/matches/${match.id}`,
-        ).catch(() => {})
+        await notifyUser({
+          userId: p.userId,
+          type: "kickoff",
+          title: "⚽ Trận đấu bắt đầu!",
+          body: `${match.homeTeam} vs ${match.awayTeam} vừa bắt đầu`,
+          url: `/matches/${match.id}`,
+          matchId: match.id,
+        }).catch(() => {})
       }
     } else {
       results.push(`⚠️ ${match.homeTeam} vs ${match.awayTeam} — thiếu kèo, không thể bắt đầu`)
@@ -98,22 +110,11 @@ export async function GET(req: NextRequest) {
       const gr = await gradeMatch(match.id)
       if (gr) {
         results.push(`🏆 Chấm điểm: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
-        if (gr.newlyGraded > 0) {
-          const preds = await prisma.prediction.findMany({
-            where: { matchId: match.id, betType: { not: "skip" } },
-            select: { userId: true, result: true },
-          })
-          const userIds = [...new Set(preds.map(p => p.userId))]
-          for (const uid of userIds) {
-            const pred = preds.find(p => p.userId === uid)
-            const emoji = pred?.result === "win" ? "🎉" : "😢"
-            await sendPushToUser(uid,
-              `⚽ ${match.homeTeam} vs ${match.awayTeam} ${match.scoreHome}-${match.scoreAway}`,
-              `${emoji} Đã có kết quả! Bảng xếp hạng hội đã cập nhật.`,
-              `/matches/${match.id}`,
-            ).catch(() => {})
-          }
-          results.push(`📲 Push cho ${userIds.length} người`)
+        if (gr.newlyGraded > 0 && match.scoreHome != null && match.scoreAway != null) {
+          const n = await notifyMatchResults(
+            match.id, match.homeTeam, match.awayTeam, match.scoreHome, match.scoreAway,
+          ).catch(() => 0)
+          results.push(`📲 Thông báo cho ${n} người`)
         }
       }
     } catch (e) {
@@ -142,22 +143,11 @@ export async function GET(req: NextRequest) {
         const gr = await gradeMatch(match.id)
         if (gr) {
           results.push(`🏆 Chấm điểm: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
-          if (gr.newlyGraded > 0) {
-            const preds = await prisma.prediction.findMany({
-              where: { matchId: match.id, betType: { not: "skip" } },
-              select: { userId: true, result: true },
-            })
-            const userIds = [...new Set(preds.map(p => p.userId))]
-            for (const uid of userIds) {
-              const pred = preds.find(p => p.userId === uid)
-              const emoji = pred?.result === "win" ? "🎉" : "😢"
-              await sendPushToUser(uid,
-                `⚽ ${match.homeTeam} vs ${match.awayTeam} ${match.scoreHome}-${match.scoreAway}`,
-                `${emoji} Đã có kết quả! Bảng xếp hạng hội đã cập nhật.`,
-                `/matches/${match.id}`,
-              ).catch(() => {})
-            }
-            results.push(`📲 Push cho ${userIds.length} người`)
+          if (gr.newlyGraded > 0 && match.scoreHome != null && match.scoreAway != null) {
+            const n = await notifyMatchResults(
+              match.id, match.homeTeam, match.awayTeam, match.scoreHome, match.scoreAway,
+            ).catch(() => 0)
+            results.push(`📲 Thông báo cho ${n} người`)
           }
         }
       } catch (e) {

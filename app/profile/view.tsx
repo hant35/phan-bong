@@ -4,7 +4,7 @@ import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Award, TrendingUp, Target, Clock, ChevronRight, Sparkles, LogOut, Pencil, Check, X } from "lucide-react"
+import { Award, TrendingUp, Target, Clock, ChevronRight, Sparkles, LogOut, Pencil, Check, X, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagUrl } from "@/lib/format"
 import { PushToggle, PushSettingsPanel } from "@/components/pwa-init"
@@ -15,9 +15,12 @@ interface Props {
   statsByType: { type: string; correct: number; total: number; color: string; disabled?: boolean }[]
   recentPicks: { id: string; match: string; homeFlag: string; awayFlag: string; pickLabel: string; confidence: number; result: string; points: number; actualScore: string | null }[]
   rankContext: { above: { name: string; avatar: string; points: number; rank: number } | null; below: { name: string; avatar: string; points: number; rank: number } | null }
+  groups: { id: string; name: string }[]
+  defaultGroupId: string | null
+  quietHoursEnabled: boolean
 }
 
-export function ProfileView({ user, badges, statsByType, recentPicks, rankContext }: Props) {
+export function ProfileView({ user, badges, statsByType, recentPicks, rankContext, groups, defaultGroupId, quietHoursEnabled }: Props) {
   const router = useRouter()
   const [tab, setTab] = useState<"overview" | "stats" | "badges" | "history">("overview")
   const winRate = user.total > 0 ? Math.round(user.correct / user.total * 100) : 0
@@ -28,6 +31,49 @@ export function ProfileView({ user, badges, statsByType, recentPicks, rankContex
   const [draftStatus, setDraftStatus] = useState(user.statusText ?? "")
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [selectedGroupId, setSelectedGroupId] = useState(defaultGroupId ?? "")
+  const [savingGroup, setSavingGroup] = useState(false)
+  const [groupError, setGroupError] = useState<string | null>(null)
+  const [quietHours, setQuietHours] = useState(quietHoursEnabled)
+  const [savingQuiet, setSavingQuiet] = useState(false)
+
+  async function toggleQuietHours() {
+    const next = !quietHours
+    setSavingQuiet(true)
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quietHoursEnabled: next }),
+      })
+      if (res.ok) setQuietHours(next)
+    } finally {
+      setSavingQuiet(false)
+    }
+  }
+
+  async function saveDefaultGroup(groupId: string) {
+    setSavingGroup(true)
+    setGroupError(null)
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ defaultGroupId: groupId }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        setGroupError(d.error ?? "Có lỗi xảy ra")
+        return
+      }
+      setSelectedGroupId(groupId)
+      router.refresh()
+    } catch {
+      setGroupError("Lỗi kết nối")
+    } finally {
+      setSavingGroup(false)
+    }
+  }
 
   async function saveProfile() {
     setSaving(true)
@@ -171,9 +217,62 @@ export function ProfileView({ user, badges, statsByType, recentPicks, rankContex
         </div>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 space-y-3">
         <PushSettingsPanel />
+        <div className="rounded-2xl p-4 flex items-center justify-between gap-3"
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <div>
+            <p className="text-sm font-bold text-white">Giờ yên lặng</p>
+            <p className="text-xs text-white/40 mt-0.5">Không gửi push từ 23h–8h (giờ VN). Inbox vẫn nhận đủ.</p>
+          </div>
+          <button
+            type="button"
+            disabled={savingQuiet}
+            onClick={() => void toggleQuietHours()}
+            className="shrink-0 w-12 h-7 rounded-full relative transition-colors disabled:opacity-50"
+            style={{ background: quietHours ? "rgba(0,230,118,0.35)" : "rgba(255,255,255,0.1)" }}
+            aria-pressed={quietHours}
+            aria-label="Bật/tắt giờ yên lặng"
+          >
+            <span
+              className="absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all"
+              style={{ left: quietHours ? "1.35rem" : "0.25rem" }}
+            />
+          </button>
+        </div>
       </div>
+
+      {groups.length > 0 && (
+        <div className="rounded-2xl p-4 mb-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Users size={14} className="text-[#00bcd4]" />
+            <h3 className="font-bold text-white text-sm">Hội mặc định</h3>
+          </div>
+          <p className="text-xs text-white/40 mb-3">
+            Dùng cho lịch trận, nhắc chưa đoán và đặt kèo nhanh khi vào trận.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {groups.map(g => (
+              <button
+                key={g.id}
+                type="button"
+                disabled={savingGroup}
+                onClick={() => { if (g.id !== selectedGroupId) void saveDefaultGroup(g.id) }}
+                className={cn(
+                  "px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-50",
+                  selectedGroupId === g.id ? "text-[#0f1117]" : "text-white/60 hover:text-white",
+                )}
+                style={selectedGroupId === g.id
+                  ? { background: "linear-gradient(135deg, #00e676, #00bcd4)" }
+                  : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                {g.name}
+              </button>
+            ))}
+          </div>
+          {groupError && <p className="text-xs text-red-400 mt-2">{groupError}</p>}
+        </div>
+      )}
 
       <div className="flex gap-1 mb-4 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)" }}>
         {[

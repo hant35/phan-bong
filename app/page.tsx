@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { ArrowRight, Zap, Flame, TrendingUp, Clock, Users, Trophy, ChevronRight, Activity, Target } from "lucide-react"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
+import { getDefaultGroupId } from "@/lib/default-group"
 import { flagUrl, formatCountdown, formatDateTimeParts, timeAgo } from "@/lib/format"
 import { LiveMatchBar } from "@/components/live-match-card"
 import { getLeaderboardFromGroupPoints, sumUserGroupPoints } from "@/lib/group-points"
@@ -17,9 +18,17 @@ export default async function HomePage() {
   const user = await getCurrentUser()
   if (!user) redirect("/login")
 
+  const defaultGroupId = await getDefaultGroupId(user.id)
   const matches = await prisma.match.findMany({
     orderBy: { kickoffAt: "asc" },
-    include: { predictions: { where: { userId: user.id } } },
+    include: {
+      predictions: {
+        where: {
+          userId: user.id,
+          ...(defaultGroupId ? { groupId: defaultGroupId } : {}),
+        },
+      },
+    },
   })
   const liveMatches = matches.filter(m => m.status === "live")
   const nextMatch = matches.find(m => m.status === "scheduled" && m.predictions.length === 0) ?? matches[0]

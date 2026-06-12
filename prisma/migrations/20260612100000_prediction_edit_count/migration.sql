@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Prediction" ADD COLUMN IF NOT EXISTS "editCount" INTEGER NOT NULL DEFAULT 0;

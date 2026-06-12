@@ -41,6 +41,12 @@ export default async function ProfilePage() {
     actualScore: p.match.scoreHome !== null ? `${p.match.scoreHome}-${p.match.scoreAway}` : null,
   }))
 
+  const memberships = await prisma.groupMember.findMany({
+    where: { userId: user.id },
+    orderBy: { joinedAt: "asc" },
+    include: { group: { select: { id: true, name: true } } },
+  })
+
   const [groupPointsSum, leaderboard] = await Promise.all([
     sumUserGroupPoints(user.id),
     getLeaderboardFromGroupPoints(),
@@ -69,5 +75,8 @@ export default async function ProfilePage() {
       above: aboveMe ? { name: aboveMe.user.name, avatar: aboveMe.user.avatar ?? "??", points: aboveMe.points, rank: myIdx } : null,
       below: belowMe ? { name: belowMe.user.name, avatar: belowMe.user.avatar ?? "??", points: belowMe.points, rank: myIdx + 2 } : null,
     }}
+    groups={memberships.map(m => ({ id: m.group.id, name: m.group.name }))}
+    defaultGroupId={user.defaultGroupId ?? memberships[0]?.group.id ?? null}
+    quietHoursEnabled={user.quietHoursEnabled}
   />
 }

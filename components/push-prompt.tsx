@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useState } from "react"
 import { Bell, X } from "lucide-react"
 import { getPushSupportState, subscribeToPush } from "@/lib/push-client"
+import { needsIosPushInstallGuide } from "@/lib/push-client-device"
+import { IosPushGuide } from "@/components/ios-push-guide"
 
 const DISMISS_KEY = "pb_push_prompt_dismissed"
 
 export function PushNotificationPrompt() {
   const [visible, setVisible] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [iosGuide, setIosGuide] = useState(false)
 
   const evaluate = useCallback(async () => {
     if (localStorage.getItem(DISMISS_KEY)) return
@@ -17,8 +20,10 @@ export function PushNotificationPrompt() {
     const me = await fetch("/api/auth/me").then(r => r.json()).catch(() => ({ user: null }))
     if (!me.user) return
 
+    setIosGuide(needsIosPushInstallGuide())
+
     const state = await getPushSupportState()
-    if (state !== "unsubscribed") return
+    if (state !== "unsubscribed" && !needsIosPushInstallGuide()) return
 
     setVisible(true)
   }, [])
@@ -77,8 +82,11 @@ export function PushNotificationPrompt() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-white mb-0.5">Bật thông báo?</p>
             <p className="text-xs text-white/50 leading-relaxed">
-              Nhận tin khi có trận mới, kết quả chấm điểm, hoặc hoạt động trong hội.
+              {iosGuide
+                ? "Trên iPhone: thêm app vào Màn hình chính trước, sau đó bật thông báo."
+                : "Nhận tin khi có trận mới, kết quả chấm điểm, hoặc hoạt động trong hội."}
             </p>
+            {iosGuide && <div className="mt-2"><IosPushGuide compact /></div>}
             <div className="flex gap-2 mt-3">
               <button
                 onClick={() => void allow()}

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
+import { checkBadgesOnPick } from "@/lib/badges"
 import { clampHopeStar, DEFAULT_HOPE_STAR } from "@/lib/hope-star"
 import { getCurrentUser } from "@/lib/auth"
-import { sendPushToUser } from "@/lib/push"
+import { notifyUser } from "@/lib/notify"
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser()
@@ -113,9 +114,30 @@ export async function POST(req: NextRequest) {
 
   const pred = await prisma.prediction.upsert({
     where: { userId_matchId_groupId: { userId: user.id, matchId, groupId } },
-    update: { betType, side: betType === "exact" ? null : side, homeScore, awayScore, confidence: conf },
-    create: { userId: user.id, matchId, groupId, betType, side: betType === "exact" ? null : side, homeScore, awayScore, confidence: conf },
+    update: {
+      betType,
+      side: betType === "exact" ? null : side,
+      homeScore,
+      awayScore,
+      confidence: conf,
+      editCount: { increment: 1 },
+    },
+    create: {
+      userId: user.id,
+      matchId,
+      groupId,
+      betType,
+      side: betType === "exact" ? null : side,
+      homeScore,
+      awayScore,
+      confidence: conf,
+    },
   })
+
+  await checkBadgesOnPick(user.id, groupId, {
+    createdAt: pred.createdAt,
+    editCount: pred.editCount,
+  }).catch(() => {})
 
   if (isNew) {
     const matchLabel = `${match.homeTeam} vs ${match.awayTeam}`
@@ -168,12 +190,14 @@ export async function POST(req: NextRequest) {
 
       const others = group.members.filter(m => m.userId !== user.id)
       await Promise.allSettled(
-        others.map(m => sendPushToUser(
-          m.userId,
-          `🎯 ${user.name} vừa đặt kèo!`,
-          pushDetail,
-          `/groups/${groupId}`,
-        ))
+        others.map(m => notifyUser({
+          userId: m.userId,
+          type: "prediction",
+          title: `🎯 ${user.name} vừa đặt kèo!`,
+          body: pushDetail,
+          url: `/groups/${groupId}`,
+          matchId,
+        }))
       )
     }
   }

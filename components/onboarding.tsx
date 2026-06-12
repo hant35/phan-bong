@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { X, ChevronRight } from "lucide-react"
+import { IosPushGuide } from "@/components/ios-push-guide"
 
 const STEPS = [
   {
@@ -78,6 +79,11 @@ export function Onboarding() {
 
         <div className="text-5xl mb-4">{s.emoji}</div>
         <h2 className="text-xl font-black text-white mb-2">{s.title}</h2>
+        {isLast && (
+          <div className="mb-4 text-left">
+            <IosPushGuide compact />
+          </div>
+        )}
         <p className="text-sm text-white/50 leading-relaxed mb-6">{s.desc}</p>
 
         <div className="flex flex-col gap-2">

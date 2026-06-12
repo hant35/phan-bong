@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db"
 import { gradeMatch } from "@/lib/grading"
-import { sendPushToUser } from "@/lib/push"
+import { notifyMatchResults } from "@/lib/result-notify"
 
 // ══════════════════════════════════════════════════════════════
 // Data source definitions
@@ -90,27 +90,9 @@ async function gradeAndNotify(
       result.details.push(`🏆 Đã chấm điểm ${homeTeam} vs ${awayTeam}: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
 
       // Chỉ gửi push lần đầu tiên chấm điểm — tránh duplicate khi cron + sync chạy cùng lúc
-      if (gr.newlyGraded > 0) {
-        const scoreText = scoreHome != null && scoreAway != null
-          ? `${scoreHome}–${scoreAway}`
-          : "đã kết thúc"
-        const predictions = await prisma.prediction.findMany({
-          where: { matchId, betType: { not: "skip" } },
-          select: { userId: true, result: true },
-        })
-        const userIds = [...new Set(predictions.map(p => p.userId))]
-
-        for (const userId of userIds) {
-          const pred = predictions.find(p => p.userId === userId)
-          const resultEmoji = pred?.result === "win" ? "🎉" : "😢"
-          await sendPushToUser(
-            userId,
-            `⚽ ${homeTeam} vs ${awayTeam} ${scoreText}`,
-            `${resultEmoji} Đã có kết quả! Bảng xếp hạng hội đã cập nhật.`,
-            `/matches/${matchId}`,
-          ).catch(() => {})
-        }
-        result.details.push(`📲 Đã gửi push cho ${userIds.length} người dự đoán`)
+      if (gr.newlyGraded > 0 && scoreHome != null && scoreAway != null) {
+        const n = await notifyMatchResults(matchId, homeTeam, awayTeam, scoreHome, scoreAway).catch(() => 0)
+        result.details.push(`📲 Đã gửi thông báo cho ${n} người dự đoán`)
       }
     }
   } catch (e) {

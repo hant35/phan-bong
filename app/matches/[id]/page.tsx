@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation"
 import { Suspense } from "react"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
+import { getDefaultGroupId } from "@/lib/default-group"
 import { MatchDetailView } from "./view"
 
 type MatchDetailPageProps = {
@@ -44,9 +45,11 @@ export default async function MatchDetailPage({ params, searchParams }: MatchDet
   const isInGroup = userMemberships.length > 0
   const userGroups = userMemberships.map(mem => ({ id: mem.group.id, name: mem.group.name }))
 
-  // Ưu tiên hội từ URL context, fallback hội đầu tiên như UI hiện tại.
-  const firstGroupId = userGroups[0]?.id
-  const selectedGroupId = userGroups.some(g => g.id === requestedGroupId) ? requestedGroupId : firstGroupId
+  const defaultGroupId = await getDefaultGroupId(user.id)
+  const fallbackGroupId = defaultGroupId && userGroups.some(g => g.id === defaultGroupId)
+    ? defaultGroupId
+    : userGroups[0]?.id
+  const selectedGroupId = userGroups.some(g => g.id === requestedGroupId) ? requestedGroupId : fallbackGroupId
   const groupConfig = selectedGroupId ? await prisma.groupMatchConfig.findUnique({
     where: { groupId_matchId: { groupId: selectedGroupId, matchId: m.id } },
     select: { blindMode: true },

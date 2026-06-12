@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
 import { GROUP_STARTING_POINTS } from "@/lib/group-points"
-import { sendPushToUser } from "@/lib/push"
+import { notifyUser } from "@/lib/notify"
 
 const JOIN_MSGS = [
   "Thêm một chiến hữu nữa rồi! 🎉",
@@ -43,12 +43,13 @@ export async function POST(req: NextRequest) {
   await Promise.allSettled(
     existingMembers
       .filter(m => m.userId !== user.id)
-      .map(m => sendPushToUser(
-        m.userId,
-        `👋 ${user.name} vừa vào hội "${group.name}"`,
-        randomMsg,
-        `/groups/${group.id}`,
-      ))
+      .map(m => notifyUser({
+        userId: m.userId,
+        type: "join",
+        title: `👋 ${user.name} vừa vào hội "${group.name}"`,
+        body: randomMsg,
+        url: `/groups/${group.id}`,
+      }))
   )
 
   return NextResponse.json({ group: { id: group.id, name: group.name } })

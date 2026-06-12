@@ -1,4 +1,4 @@
-const CACHE = "phanbong-v4"
+const CACHE = "phanbong-v5"
 const PRECACHE = ["/offline.html"]
 
 self.addEventListener("install", e => {
@@ -22,13 +22,11 @@ self.addEventListener("fetch", e => {
   const url = new URL(e.request.url)
   if (url.protocol !== "http:" && url.protocol !== "https:") return
   if (url.origin !== self.location.origin) return
-  // Không cache API calls
   if (url.pathname.startsWith("/api/")) return
 
   const isStaticAsset = url.pathname.startsWith("/_next/static/")
 
   if (isStaticAsset) {
-    // Static assets: cache-first (content-hashed, immutable)
     e.respondWith(
       caches.match(e.request).then(cached => {
         if (cached) return cached
@@ -43,7 +41,6 @@ self.addEventListener("fetch", e => {
     return
   }
 
-  // Pages: network-first → cache → offline.html (static, không cần server)
   e.respondWith(
     fetch(e.request)
       .then(res => {
@@ -59,35 +56,70 @@ self.addEventListener("fetch", e => {
   )
 })
 
+function resolveNotificationUrl(data, action) {
+  if (action === "pick" && data.pickUrl) return data.pickUrl
+  if (action === "view" && data.url) return data.url
+  return data.url || "/"
+}
+
+function navigateClient(url) {
+  const absolute = new URL(url, self.location.origin).href
+  return clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+    for (const client of list) {
+      if (client.url.startsWith(self.location.origin)) {
+        client.postMessage({ type: "navigate", url })
+        return client.focus()
+      }
+    }
+    if (clients.openWindow) return clients.openWindow(absolute)
+  })
+}
+
 // ── Push Notifications ──
 self.addEventListener("push", e => {
-  let data = { title: "Phán Bóng ⚽", body: "Có thông báo mới!", url: "/" }
+  let data = {
+    title: "Phán Bóng ⚽",
+    body: "Có thông báo mới!",
+    url: "/",
+    tag: "default",
+    type: "admin",
+    requireInteraction: false,
+    actions: [],
+    pickUrl: null,
+  }
   if (e.data) {
     try { data = { ...data, ...JSON.parse(e.data.text()) } } catch {}
   }
+
+  const options = {
+    body: data.body,
+    icon: "/icons/icon-192.png",
+    badge: "/icons/badge-72.png",
+    tag: data.tag || data.type || "phanbong",
+    renotify: true,
+    requireInteraction: !!data.requireInteraction,
+    data: {
+      url: data.url,
+      pickUrl: data.pickUrl,
+      type: data.type,
+    },
+    vibrate: [200, 100, 200],
+  }
+
+  if (Array.isArray(data.actions) && data.actions.length > 0) {
+    options.actions = data.actions.slice(0, 2)
+  }
+
   e.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: "/icons/icon-192.png",
-      badge: "/icons/badge-72.png",
-      data: { url: data.url },
-      vibrate: [200, 100, 200],
-    }).catch(() => {})
+    self.registration.showNotification(data.title, options).catch(() => {})
   )
 })
 
 self.addEventListener("notificationclick", e => {
   e.notification.close()
-  const url = e.notification.data?.url || "/"
-  e.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
-      for (const client of list) {
-        if (client.url.includes(self.location.origin) && "focus" in client) {
-          client.navigate(url)
-          return client.focus()
-        }
-      }
-      if (clients.openWindow) return clients.openWindow(url)
-    })
-  )
+  const data = e.notification.data || {}
+  const action = e.action || "default"
+  const url = resolveNotificationUrl(data, action === "default" ? null : action)
+
+  e.waitUntil(navigateClient(url))
 })

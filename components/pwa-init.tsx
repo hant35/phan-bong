@@ -7,12 +7,21 @@ import {
   subscribeToPush,
   unsubscribeFromPush,
 } from "@/lib/push-client"
+import { IosPushGuide } from "@/components/ios-push-guide"
 
 export function PwaInit() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {})
     }
+
+    function onSwMessage(e: MessageEvent) {
+      if (e.data?.type === "navigate" && typeof e.data.url === "string") {
+        window.location.href = e.data.url
+      }
+    }
+    navigator.serviceWorker?.addEventListener("message", onSwMessage)
+    return () => navigator.serviceWorker?.removeEventListener("message", onSwMessage)
   }, [])
   return null
 }
@@ -32,7 +41,7 @@ function supportStateToPushState(state: Awaited<ReturnType<typeof getPushSupport
   }
 }
 
-export function PushToggle() {
+export function PushToggle({ compact = false }: { compact?: boolean }) {
   const [state, setState] = useState<PushState>("idle")
 
   useEffect(() => {
@@ -67,6 +76,21 @@ export function PushToggle() {
   if (state === "denied") return null
 
   const isError = state === "error"
+
+  if (compact) {
+    return (
+      <button
+        onClick={state === "granted" ? unsubscribe : subscribe}
+        disabled={state === "loading" || isError}
+        className="relative p-2 rounded-xl hover:bg-white/5 transition-colors disabled:opacity-50"
+        title={isError ? "Bật thông báo thất bại" : state === "granted" ? "Thông báo đang bật" : "Bật thông báo"}
+      >
+        {isError || state !== "granted"
+          ? <BellOff size={18} className="text-white/40" />
+          : <Bell size={18} className="text-[#00e676]" />}
+      </button>
+    )
+  }
 
   return (
     <button
@@ -181,10 +205,11 @@ export function PushSettingsPanel() {
 
   return (
     <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+      <IosPushGuide />
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-white flex items-center gap-2">
           <Bell size={14} className="text-[#00e676]" />
-          Push Notification
+          Thông báo đẩy (Push)
         </h3>
         <div className="flex items-center gap-1.5">
           {(state === "granted" || state === "success") ? (

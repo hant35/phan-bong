@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
+import { getDefaultGroupId } from "@/lib/default-group"
 import { sumUserGroupPoints } from "@/lib/group-points"
 import { MatchesView } from "./view"
 
@@ -8,10 +9,16 @@ export default async function MatchesPage() {
   const user = await getCurrentUser()
   if (!user) redirect("/login")
 
+  const defaultGroupId = await getDefaultGroupId(user.id)
   const matches = await prisma.match.findMany({
     orderBy: { kickoffAt: "asc" },
     include: {
-      predictions: { where: { userId: user.id } },
+      predictions: {
+        where: {
+          userId: user.id,
+          ...(defaultGroupId ? { groupId: defaultGroupId } : {}),
+        },
+      },
       _count: { select: { predictions: true } },
     },
   })

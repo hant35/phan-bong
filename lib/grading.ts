@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db"
+import { checkBadgesAfterGrading } from "@/lib/badges"
 import { clampPoints, hopeStarDelta, SKIP_PENALTY } from "@/lib/hope-star"
+import { notifyOvertakenAfterGrading, snapshotGroupRanks } from "@/lib/overtaken"
 
 // ══════════════════════════════════════════════════════════════
 // Grading Engine — chấm điểm khi trận kết thúc
@@ -221,8 +223,16 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
     include: { user: { select: { id: true, name: true } } },
   })
 
+  const affectedGroupIds = [...new Set([
+    ...groupConfigs.map(c => c.groupId),
+    ...predictions.map(p => p.groupId),
+  ])]
+  const rankBefore = await snapshotGroupRanks(affectedGroupIds)
+
   const details: GradingResult["details"] = []
   let wins = 0, losses = 0, newlyGraded = 0
+  let rankingsMayHaveChanged = false
+  const newlyGradedUserIds: string[] = []
 
   // 1. Grade each prediction — bỏ qua prediction đã có result (idempotent)
   for (const pred of predictions) {
@@ -259,8 +269,14 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
     if (result === "win") wins++
     else losses++
     newlyGraded++
+    rankingsMayHaveChanged = true
+    newlyGradedUserIds.push(pred.userId)
 
     details.push({ userId: pred.userId, name: pred.user.name, betType: pred.betType, result, reason: withMultiplierReason(reason, baseDelta, multiplier, pointsDelta) })
+  }
+
+  if (newlyGradedUserIds.length > 0) {
+    await checkBadgesAfterGrading(newlyGradedUserIds).catch(() => {})
   }
 
   // 2. Tìm thành viên chưa đoán theo từng hội (per-group skip)
@@ -315,6 +331,7 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
               points: memberRow ? clampPoints(memberRow.points, -SKIP_PENALTY) : 0,
             },
           })
+          rankingsMayHaveChanged = true
         }
       }
     }
@@ -330,6 +347,10 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
         data: { streak: 0 },
       })
     }
+  }
+
+  if (rankingsMayHaveChanged) {
+    await notifyOvertakenAfterGrading(affectedGroupIds, rankBefore).catch(() => {})
   }
 
   return {

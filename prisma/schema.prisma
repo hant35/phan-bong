@@ -19,8 +19,10 @@ model User {
   role         String        @default("user")
   googleId     String?       @unique
   totalPoints  Int           @default(0) // deprecated — xu theo GroupMember.points
-  streak       Int           @default(0)
-  createdAt    DateTime      @default(now())
+  streak          Int           @default(0)
+  defaultGroupId       String?
+  quietHoursEnabled  Boolean       @default(true)
+  createdAt          DateTime      @default(now())
   activities        Activity[]
   adminOf           Group[]           @relation("GroupAdmin")
   memberships       GroupMember[]
@@ -147,6 +149,7 @@ model Prediction {
   homeScore  Int?
   awayScore  Int?
   confidence Int      @default(1)
+  editCount  Int      @default(0)
   result     String?
   points     Int      @default(0)
   createdAt  DateTime @default(now())

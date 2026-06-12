@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth"
-import { sendPushToUser } from "@/lib/push"
+import { sendPushToUserSimple } from "@/lib/push"
 import { prisma } from "@/lib/db"
 
 export async function POST() {
@@ -11,7 +11,7 @@ export async function POST() {
   const subCount = await prisma.pushSubscription.count({ where: { userId: user.id } })
   console.log(`[push/test] User ${user.name} (${user.id}) has ${subCount} subscriptions`)
 
-  const result = await sendPushToUser(
+  const result = await sendPushToUserSimple(
     user.id,
     "🔔 Test thông báo",
     `Xin chào ${user.name}! Push notification đang hoạt động.`,
