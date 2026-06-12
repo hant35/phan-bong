@@ -103,22 +103,23 @@ export async function GET(req: NextRequest) {
       const gr = await gradeMatch(match.id)
       if (gr) {
         results.push(`🏆 Chấm điểm: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
-        // Push notification cho user đã dự đoán
-        const preds = await prisma.prediction.findMany({
-          where: { matchId: match.id, betType: { not: "skip" } },
-          select: { userId: true, result: true },
-        })
-        const userIds = [...new Set(preds.map(p => p.userId))]
-        for (const uid of userIds) {
-          const pred = preds.find(p => p.userId === uid)
-          const emoji = pred?.result === "win" ? "🎉" : "😢"
-          await sendPushToUser(uid,
-            `⚽ ${match.homeTeam} vs ${match.awayTeam} ${match.scoreHome}-${match.scoreAway}`,
-            `${emoji} Đã có kết quả! Bảng xếp hạng hội đã cập nhật.`,
-            `/matches/${match.id}`,
-          ).catch(() => {})
+        if (gr.newlyGraded > 0) {
+          const preds = await prisma.prediction.findMany({
+            where: { matchId: match.id, betType: { not: "skip" } },
+            select: { userId: true, result: true },
+          })
+          const userIds = [...new Set(preds.map(p => p.userId))]
+          for (const uid of userIds) {
+            const pred = preds.find(p => p.userId === uid)
+            const emoji = pred?.result === "win" ? "🎉" : "😢"
+            await sendPushToUser(uid,
+              `⚽ ${match.homeTeam} vs ${match.awayTeam} ${match.scoreHome}-${match.scoreAway}`,
+              `${emoji} Đã có kết quả! Bảng xếp hạng hội đã cập nhật.`,
+              `/matches/${match.id}`,
+            ).catch(() => {})
+          }
+          results.push(`📲 Push cho ${userIds.length} người`)
         }
-        results.push(`📲 Push cho ${userIds.length} người`)
       }
     } catch (e) {
       results.push(`❌ Lỗi chấm điểm: ${e instanceof Error ? e.message : String(e)}`)
@@ -146,21 +147,23 @@ export async function GET(req: NextRequest) {
         const gr = await gradeMatch(match.id)
         if (gr) {
           results.push(`🏆 Chấm điểm: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
-          const preds = await prisma.prediction.findMany({
-            where: { matchId: match.id, betType: { not: "skip" } },
-            select: { userId: true, result: true },
-          })
-          const userIds = [...new Set(preds.map(p => p.userId))]
-          for (const uid of userIds) {
-            const pred = preds.find(p => p.userId === uid)
-            const emoji = pred?.result === "win" ? "🎉" : "😢"
-            await sendPushToUser(uid,
-              `⚽ ${match.homeTeam} vs ${match.awayTeam} ${match.scoreHome}-${match.scoreAway}`,
-              `${emoji} Đã có kết quả! Bảng xếp hạng hội đã cập nhật.`,
-              `/matches/${match.id}`,
-            ).catch(() => {})
+          if (gr.newlyGraded > 0) {
+            const preds = await prisma.prediction.findMany({
+              where: { matchId: match.id, betType: { not: "skip" } },
+              select: { userId: true, result: true },
+            })
+            const userIds = [...new Set(preds.map(p => p.userId))]
+            for (const uid of userIds) {
+              const pred = preds.find(p => p.userId === uid)
+              const emoji = pred?.result === "win" ? "🎉" : "😢"
+              await sendPushToUser(uid,
+                `⚽ ${match.homeTeam} vs ${match.awayTeam} ${match.scoreHome}-${match.scoreAway}`,
+                `${emoji} Đã có kết quả! Bảng xếp hạng hội đã cập nhật.`,
+                `/matches/${match.id}`,
+              ).catch(() => {})
+            }
+            results.push(`📲 Push cho ${userIds.length} người`)
           }
-          results.push(`📲 Push cho ${userIds.length} người`)
         }
       } catch (e) {
         results.push(`❌ Lỗi chấm điểm: ${e instanceof Error ? e.message : String(e)}`)

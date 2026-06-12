@@ -89,27 +89,29 @@ async function gradeAndNotify(
     if (gr) {
       result.details.push(`🏆 Đã chấm điểm ${homeTeam} vs ${awayTeam}: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
 
-      // Gửi push cho tất cả user đã dự đoán trận này
-      const scoreText = scoreHome != null && scoreAway != null
-        ? `${scoreHome}–${scoreAway}`
-        : "đã kết thúc"
-      const predictions = await prisma.prediction.findMany({
-        where: { matchId, betType: { not: "skip" } },
-        select: { userId: true, result: true },
-      })
-      const userIds = [...new Set(predictions.map(p => p.userId))]
+      // Chỉ gửi push lần đầu tiên chấm điểm — tránh duplicate khi cron + sync chạy cùng lúc
+      if (gr.newlyGraded > 0) {
+        const scoreText = scoreHome != null && scoreAway != null
+          ? `${scoreHome}–${scoreAway}`
+          : "đã kết thúc"
+        const predictions = await prisma.prediction.findMany({
+          where: { matchId, betType: { not: "skip" } },
+          select: { userId: true, result: true },
+        })
+        const userIds = [...new Set(predictions.map(p => p.userId))]
 
-      for (const userId of userIds) {
-        const pred = predictions.find(p => p.userId === userId)
-        const resultEmoji = pred?.result === "win" ? "🎉" : "😢"
-        await sendPushToUser(
-          userId,
-          `⚽ ${homeTeam} vs ${awayTeam} ${scoreText}`,
-          `${resultEmoji} Đã có kết quả! Bảng xếp hạng hội đã cập nhật.`,
-          `/matches/${matchId}`,
-        ).catch(() => {})
+        for (const userId of userIds) {
+          const pred = predictions.find(p => p.userId === userId)
+          const resultEmoji = pred?.result === "win" ? "🎉" : "😢"
+          await sendPushToUser(
+            userId,
+            `⚽ ${homeTeam} vs ${awayTeam} ${scoreText}`,
+            `${resultEmoji} Đã có kết quả! Bảng xếp hạng hội đã cập nhật.`,
+            `/matches/${matchId}`,
+          ).catch(() => {})
+        }
+        result.details.push(`📲 Đã gửi push cho ${userIds.length} người dự đoán`)
       }
-      result.details.push(`📲 Đã gửi push cho ${userIds.length} người dự đoán`)
     }
   } catch (e) {
     result.errors.push(`Lỗi chấm điểm ${homeTeam} vs ${awayTeam}: ${e instanceof Error ? e.message : String(e)}`)

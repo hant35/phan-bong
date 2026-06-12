@@ -15,6 +15,7 @@ export interface GradingResult {
   wins: number
   losses: number
   skipped: number // thành viên hội không đoán
+  newlyGraded: number // số prediction mới chấm lần này (0 = đã chấm trước đó)
   details: { userId: string; name: string; betType: string; result: "win" | "loss"; reason: string }[]
   skippedUsers: { userId: string; name: string; groupName: string }[]
 }
@@ -177,6 +178,7 @@ export async function previewGrading(matchId: string): Promise<GradingResult | n
     wins,
     losses,
     skipped: 0,
+    newlyGraded: 0,
     details,
     skippedUsers: [],
   }
@@ -202,7 +204,7 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
   })
 
   const details: GradingResult["details"] = []
-  let wins = 0, losses = 0
+  let wins = 0, losses = 0, newlyGraded = 0
 
   // 1. Grade each prediction — bỏ qua prediction đã có result (idempotent)
   for (const pred of predictions) {
@@ -236,6 +238,7 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
 
     if (result === "win") wins++
     else losses++
+    newlyGraded++
 
     details.push({ userId: pred.userId, name: pred.user.name, betType: pred.betType, result, reason })
   }
@@ -319,6 +322,7 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
     wins,
     losses,
     skipped: skippedUsers.length,
+    newlyGraded,
     details,
     skippedUsers,
   }
