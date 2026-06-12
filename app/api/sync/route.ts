@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { syncFootballData } from "@/lib/sync-sources"
+import { requireCronOrAdmin } from "@/lib/request-auth"
 
 // ══════════════════════════════════════════════════════════════
-// GET /api/sync — Auto-sync với debounce
-// Dù 100 user gọi cùng lúc, chỉ gọi Football-Data 1 lần mỗi 15s
+// GET /api/sync — Auto-sync có xác thực với debounce
+// Chỉ cron có secret hoặc admin mới được gọi để tránh lạm dụng quota API.
 // ══════════════════════════════════════════════════════════════
 
 // Module-level cache (shared across all requests trong cùng serverless instance)
@@ -12,7 +13,10 @@ let lastSyncAt = 0
 let lastResult: { updated: number; details: string[]; errors: string[] } | null = null
 const DEBOUNCE_MS = 15_000 // Tối thiểu 15s giữa 2 lần gọi API thực
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const allowed = await requireCronOrAdmin(req)
+  if (!allowed) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
   const fdKey = process.env.FOOTBALL_DATA_API_KEY
   if (!fdKey) {
     return NextResponse.json({ ok: false, error: "No API key configured" }, { status: 500 })

@@ -38,7 +38,7 @@ interface Activity { id: string; type: string; action: string; target: string; u
 interface UpcomingMatch {
   id: string; homeTeam: string; awayTeam: string; homeFlag: string; awayFlag: string
   kickoffAt: string; ahLine: number | null; ouLine: number | null; allowedBetTypes: string[]
-  pointsMultiplier: number; blindMode: boolean; hasPick: boolean
+  pointsMultiplier: number; blindMode: boolean; blindModeActive: boolean; hasPick: boolean
   isLive: boolean; scoreHome: number | null; scoreAway: number | null; minute: number | null
   hasConfig: boolean
   predStats: { homeCount: number; awayCount: number; overCount: number; underCount: number }
@@ -398,7 +398,12 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                       )}
 
                       {/* Tỉ lệ dự đoán */}
-                      {(ahTotal > 0 || ouTotal > 0) && (
+                      {match.blindModeActive ? (
+                        <div className="rounded-lg px-2.5 py-1.5 text-[10px] text-center"
+                          style={{ background: "rgba(124,58,237,0.08)", color: "#a78bfa", border: "1px solid rgba(124,58,237,0.16)" }}>
+                          Blind mode đang bật — tỉ lệ sẽ mở sau kickoff
+                        </div>
+                      ) : (ahTotal > 0 || ouTotal > 0) && (
                         <div className="space-y-1 md:space-y-0.5">
                           {ahTotal > 0 && (
                             <div>

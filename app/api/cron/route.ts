@@ -3,21 +3,16 @@ import { prisma } from "@/lib/db"
 import { sendPushToUser } from "@/lib/push"
 import { gradeMatch } from "@/lib/grading"
 import { syncFootballData } from "@/lib/sync-sources"
+import { requireCronOrAdmin } from "@/lib/request-auth"
 
 // ══════════════════════════════════════════════════════════════
-// Cron Job — chạy mỗi 1 phút, tự động chuyển trạng thái trận đấu
-// GET /api/cron — có thể gọi từ client setInterval hoặc external cron
+// Cron Job — tự động chuyển trạng thái trận đấu
+// GET /api/cron — chỉ cho Vercel/external cron có secret hoặc admin
 // ══════════════════════════════════════════════════════════════
 
 export async function GET(req: NextRequest) {
-  // Optional: verify cron secret for external callers
-  const secret = req.nextUrl.searchParams.get("secret")
-  const expectedSecret = process.env.CRON_SECRET
-
-  // If CRON_SECRET is set, validate it (for production security)
-  if (expectedSecret && secret !== expectedSecret) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const allowed = await requireCronOrAdmin(req)
+  if (!allowed) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const now = new Date()
   const results: string[] = []

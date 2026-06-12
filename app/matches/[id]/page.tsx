@@ -4,8 +4,24 @@ import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
 import { MatchDetailView } from "./view"
 
-export default async function MatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
+type MatchDetailPageProps = {
+  params: Promise<{ id: string }>
+  searchParams?: Promise<{ from?: string | string[] }>
+}
+
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value
+}
+
+function groupIdFromBackUrl(backUrl: string | undefined) {
+  if (!backUrl?.startsWith("/groups/")) return null
+  return backUrl.split("/groups/")[1]?.split("/")[0] ?? null
+}
+
+export default async function MatchDetailPage({ params, searchParams }: MatchDetailPageProps) {
   const { id } = await params
+  const query = searchParams ? await searchParams : {}
+  const requestedGroupId = groupIdFromBackUrl(firstParam(query.from))
   const user = await getCurrentUser()
   if (!user) redirect("/login")
 
@@ -20,11 +36,6 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   })
   if (!m) notFound()
 
-  const total = m.predictions.length || 1
-  const home = m.predictions.filter(p => p.side === "home" || (p.betType === "exact" && (p.homeScore ?? 0) > (p.awayScore ?? 0))).length
-  const away = m.predictions.filter(p => p.side === "away" || (p.betType === "exact" && (p.homeScore ?? 0) < (p.awayScore ?? 0))).length
-  const draw = m.predictions.length - home - away
-
   const userMemberships = await prisma.groupMember.findMany({
     where: { userId: user.id },
     orderBy: { joinedAt: "asc" },
@@ -33,9 +44,22 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   const isInGroup = userMemberships.length > 0
   const userGroups = userMemberships.map(mem => ({ id: mem.group.id, name: mem.group.name }))
 
-  // Lấy pick của user từ group đầu tiên
+  // Ưu tiên hội từ URL context, fallback hội đầu tiên như UI hiện tại.
   const firstGroupId = userGroups[0]?.id
-  const myPick = m.predictions.find(p => p.userId === user.id && (!firstGroupId || p.groupId === firstGroupId))
+  const selectedGroupId = userGroups.some(g => g.id === requestedGroupId) ? requestedGroupId : firstGroupId
+  const groupConfig = selectedGroupId ? await prisma.groupMatchConfig.findUnique({
+    where: { groupId_matchId: { groupId: selectedGroupId, matchId: m.id } },
+    select: { blindMode: true },
+  }) : null
+  const blindModeActive = !!groupConfig?.blindMode && m.status === "scheduled" && m.kickoffAt > new Date()
+  const groupPredictions = selectedGroupId ? m.predictions.filter(p => p.groupId === selectedGroupId) : m.predictions
+  const visiblePredictions = blindModeActive ? [] : groupPredictions
+  const myPick = m.predictions.find(p => p.userId === user.id && (!selectedGroupId || p.groupId === selectedGroupId))
+
+  const total = visiblePredictions.length || 1
+  const home = visiblePredictions.filter(p => p.side === "home" || (p.betType === "exact" && (p.homeScore ?? 0) > (p.awayScore ?? 0))).length
+  const away = visiblePredictions.filter(p => p.side === "away" || (p.betType === "exact" && (p.homeScore ?? 0) < (p.awayScore ?? 0))).length
+  const draw = visiblePredictions.length - home - away
 
   const data = {
     id: m.id,
@@ -50,13 +74,14 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       home: m.h2hHome, draw: m.h2hDraw, away: m.h2hAway,
       recent: m.h2hRecent ? (m.h2hRecent.startsWith("[") ? JSON.parse(m.h2hRecent) : m.h2hRecent.split("")) : [],
     } : null,
-    consensus: m.predictions.length > 0 ? {
+    blindModeActive,
+    consensus: visiblePredictions.length > 0 ? {
       home: Math.round(home / total * 100),
       draw: Math.round(draw / total * 100),
       away: Math.round(away / total * 100),
     } : null,
-    predictorsCount: m.predictions.length,
-    predictors: m.predictions.slice(0, 8).map(p => ({
+    predictorsCount: visiblePredictions.length,
+    predictors: visiblePredictions.slice(0, 8).map(p => ({
       name: p.user.name, avatar: p.user.avatar ?? "??", streak: p.user.streak,
       side: p.side, betType: p.betType, confidence: p.confidence,
     })),

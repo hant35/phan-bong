@@ -29,6 +29,7 @@ interface Match {
   ahLine?: number | null; ouLine?: number | null
   weather?: { icon: string | null; temp: number | null; condition: string | null } | null
   h2h?: { home: number | null; draw: number | null; away: number | null; recent: string[] } | null
+  blindModeActive: boolean
   consensus?: { home: number; draw: number; away: number } | null
   predictorsCount: number
   predictors: { name: string; avatar: string; streak: number; side: string | null; betType: string; confidence: number }[]
@@ -61,6 +62,7 @@ export function MatchDetailView({ match, currentUserId, isInGroup, userGroups }:
   const [submitted, setSubmitted] = useState(!!match.myPick)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [initialNowMs] = useState(() => Date.now())
 
   const isLocked = match.status !== "scheduled"
   const kickoff = new Date(match.kickoffAt)
@@ -278,7 +280,7 @@ export function MatchDetailView({ match, currentUserId, isInGroup, userGroups }:
                      `Kèo → ${pick === "home" ? match.homeTeam : pick === "away" ? match.awayTeam : "Hòa"}`}
                   </p>
                   <p className="text-xs text-white/45 mt-1">
-                    {hopeStarLabel(confidence)} · Còn {Math.max(0, Math.floor((kickoff.getTime() - Date.now()) / 60000))}p có thể sửa
+                    {hopeStarLabel(confidence)} · Còn {Math.max(0, Math.floor((kickoff.getTime() - initialNowMs) / 60000))}p có thể sửa
                   </p>
                 </div>
                 <button onClick={() => setSubmitted(false)} className="text-xs text-[#00e676]/60 hover:text-[#00e676] transition-colors underline">
@@ -515,10 +517,16 @@ export function MatchDetailView({ match, currentUserId, isInGroup, userGroups }:
         <div className="space-y-3">
           <div className="glass rounded-2xl p-4">
             <h3 className="font-bold text-white/70 mb-4 flex items-center gap-2 text-sm">
-              <BarChart3 size={15} /> Đồng thuận hội ({match.predictorsCount} người)
+              <BarChart3 size={15} /> Đồng thuận hội{!match.blindModeActive && ` (${match.predictorsCount} người)`}
             </h3>
 
-            {match.consensus ? (
+            {match.blindModeActive ? (
+              <div className="rounded-xl p-4 text-center"
+                style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.18)" }}>
+                <p className="text-sm font-bold" style={{ color: "#a78bfa" }}>Blind mode đang bật</p>
+                <p className="text-xs text-white/35 mt-1">Tỉ lệ và lựa chọn của hội sẽ mở sau kickoff.</p>
+              </div>
+            ) : match.consensus ? (
               <div className="mb-4">
                 <div className="h-3 rounded-full overflow-hidden flex mb-2">
                   <div style={{ width: `${match.consensus.home}%`, background: match.homeColor ?? "#00e676" }} />
