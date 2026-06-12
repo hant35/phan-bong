@@ -1,5 +1,5 @@
-const CACHE = "phanbong-v3"
-const PRECACHE = ["/", "/matches", "/leaderboard", "/offline"]
+const CACHE = "phanbong-v4"
+const PRECACHE = ["/offline.html"]
 
 self.addEventListener("install", e => {
   e.waitUntil(
@@ -20,51 +20,59 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return
   const url = new URL(e.request.url)
-  // Chỉ xử lý http/https cùng origin — bỏ qua chrome-extension, data:, ...
   if (url.protocol !== "http:" && url.protocol !== "https:") return
   if (url.origin !== self.location.origin) return
   // Không cache API calls
   if (url.pathname.startsWith("/api/")) return
 
+  const isStaticAsset = url.pathname.startsWith("/_next/static/")
+
+  if (isStaticAsset) {
+    // Static assets: cache-first (content-hashed, immutable)
+    e.respondWith(
+      caches.match(e.request).then(cached => {
+        if (cached) return cached
+        return fetch(e.request).then(res => {
+          if (res.ok) {
+            caches.open(CACHE).then(c => c.put(e.request, res.clone())).catch(() => {})
+          }
+          return res
+        }).catch(() => Response.error())
+      })
+    )
+    return
+  }
+
+  // Pages: network-first → cache → offline.html (static, không cần server)
   e.respondWith(
     fetch(e.request)
       .then(res => {
-        // Chỉ cache response hợp lệ (basic, status 200)
         if (res.ok && res.type === "basic") {
-          const clone = res.clone()
-          caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => {})
+          caches.open(CACHE).then(c => c.put(e.request, res.clone())).catch(() => {})
         }
         return res
       })
-      .catch(() => caches.match(e.request).then(cached => cached || caches.match("/offline")))
+      .catch(() =>
+        caches.match(e.request)
+          .then(cached => cached || caches.match("/offline.html"))
+      )
   )
 })
 
 // ── Push Notifications ──
 self.addEventListener("push", e => {
-  console.log("[SW] Push received!", e.data ? e.data.text() : "no data")
-
   let data = { title: "Phán Bóng ⚽", body: "Có thông báo mới!", url: "/" }
   if (e.data) {
-    try {
-      const parsed = JSON.parse(e.data.text())
-      data = { ...data, ...parsed }
-    } catch (err) {
-      console.error("[SW] Failed to parse push data:", err)
-    }
+    try { data = { ...data, ...JSON.parse(e.data.text()) } } catch {}
   }
-
-  const options = {
-    body: data.body,
-    icon: "/icons/icon-192.png",
-    badge: "/icons/badge-72.png",
-    data: { url: data.url },
-    vibrate: [200, 100, 200],
-  }
-
   e.waitUntil(
-    self.registration.showNotification(data.title, options)
-      .catch(err => console.error("[SW] showNotification failed:", err))
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/badge-72.png",
+      data: { url: data.url },
+      vibrate: [200, 100, 200],
+    }).catch(() => {})
   )
 })
 

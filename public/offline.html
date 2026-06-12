@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1117" />
+  <title>Phán Bóng ⚽</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: #0f1117;
+      color: #f0f2ff;
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100%;
+      padding: 2rem;
+      text-align: center;
+      gap: 1rem;
+    }
+    .logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #00e676, #00bcd4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: #fff;
+    }
+    p {
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.4);
+      max-width: 280px;
+      line-height: 1.5;
+    }
+    button {
+      margin-top: 0.5rem;
+      padding: 0.625rem 1.5rem;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, #00e676, #00bcd4);
+      color: #0f1117;
+      font-size: 0.875rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo">⚽</div>
+  <h1>Không có kết nối mạng</h1>
+  <p>Kiểm tra lại Wi-Fi hoặc dữ liệu di động, rồi thử lại.</p>
+  <button onclick="location.reload()">Thử lại</button>
+</body>
+</html>
