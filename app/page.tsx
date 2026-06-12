@@ -17,18 +17,6 @@ export default async function HomePage() {
   const user = await getCurrentUser()
   if (!user) redirect("/login")
 
-  const myGroupMemberships = await prisma.groupMember.findMany({
-    where: { userId: user.id },
-    select: { groupId: true },
-    orderBy: { joinedAt: "asc" },
-  })
-  if (myGroupMemberships.length === 1) {
-    redirect(`/groups/${myGroupMemberships[0].groupId}`)
-  }
-  if (myGroupMemberships.length >= 2) {
-    redirect("/groups")
-  }
-
   const matches = await prisma.match.findMany({
     orderBy: { kickoffAt: "asc" },
     include: { predictions: { where: { userId: user.id } } },
@@ -309,8 +297,8 @@ export default async function HomePage() {
                 </div>
               ))}
             </div>
-            <Link href="/leaderboard" className="mt-3 flex items-center justify-center gap-1 text-[10px] font-semibold text-white/50 hover:text-white pt-2 border-t border-white/5">
-              Xem Bảng vàng <ChevronRight size={10} />
+            <Link href="/groups" className="mt-3 flex items-center justify-center gap-1 text-[10px] font-semibold text-white/50 hover:text-white pt-2 border-t border-white/5">
+              Xem bảng hội <ChevronRight size={10} />
             </Link>
           </div>
         </div>

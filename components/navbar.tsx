@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Bell, Trophy, Users, Calendar, User, Home, History, Shield } from "lucide-react"
+import { Bell, Users, Calendar, Home, History, Shield } from "lucide-react"
 import { getCurrentUser } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { NavbarLinks } from "./navbar-links"
@@ -8,7 +8,6 @@ import { PushToggle } from "./pwa-init"
 const navItems = [
   { href: "/", label: "Trang chủ", icon: "Home" as const, exact: true },
   { href: "/matches", label: "Lịch trận", icon: "Calendar" as const },
-  { href: "/leaderboard", label: "Bảng vàng", icon: "Trophy" as const },
   { href: "/groups", label: "Hội", icon: "Users" as const },
   { href: "/history", label: "Lịch sử", icon: "History" as const },
 ]

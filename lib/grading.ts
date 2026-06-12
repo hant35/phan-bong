@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db"
-import { clampPoints, hopeStarDelta } from "@/lib/hope-star"
+import { clampPoints, hopeStarDelta, SKIP_PENALTY } from "@/lib/hope-star"
 
 // ══════════════════════════════════════════════════════════════
 // Grading Engine — chấm điểm khi trận kết thúc
@@ -278,12 +278,19 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
               side: null,
               confidence: 0,
               result: "loss",
-              points: 0,
+              points: -SKIP_PENALTY,
             },
+          })
+          const memberRow = await prisma.groupMember.findUnique({
+            where: { userId_groupId: { userId: member.userId, groupId: group.id } },
+            select: { points: true },
           })
           await prisma.groupMember.updateMany({
             where: { userId: member.userId, groupId: group.id },
-            data: { skipped: { increment: 1 } },
+            data: {
+              skipped: { increment: 1 },
+              points: memberRow ? clampPoints(memberRow.points, -SKIP_PENALTY) : 0,
+            },
           })
         }
       }
