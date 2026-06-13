@@ -326,9 +326,30 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                   const overPct = ouTotal > 0 ? Math.round(overCount / ouTotal * 100) : 50
                   const underPct = ouTotal > 0 ? 100 - overPct : 50
 
+                  const mult = match.pointsMultiplier ?? 1
+                  const isHighMult = mult >= 2
+
                   return (
-                    <div key={match.id} className="rounded-xl px-3 py-3 space-y-2 md:px-2.5 md:py-2 md:space-y-1.5"
-                      style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <div key={match.id}
+                      className={cn("rounded-xl px-3 py-3 space-y-2 md:px-2.5 md:py-2 md:space-y-1.5 relative", isHighMult && mult >= 3 && "animate-[glow-pulse_3s_ease-in-out_infinite]")}
+                      style={isHighMult ? {
+                        background: "rgba(255,215,0,0.04)",
+                        border: `1px solid rgba(255,215,0,${mult >= 3 ? 0.4 : 0.25})`,
+                        boxShadow: `0 0 ${mult >= 3 ? 12 : 6}px rgba(255,215,0,${mult >= 3 ? 0.15 : 0.08})`,
+                      } : {
+                        background: "rgba(255,255,255,0.02)",
+                        border: "1px solid rgba(255,255,255,0.05)",
+                      }}>
+
+                      {/* Banner hệ số cao */}
+                      {isHighMult && (
+                        <div className="flex items-center gap-1.5 -mt-1 mb-1">
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md"
+                            style={{ background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,170,0,0.15))", color: "#ffd700", border: "1px solid rgba(255,215,0,0.2)" }}>
+                            {mult >= 3 ? "⭐" : "🔥"} TRẬN ĐINH · Hệ số ×{mult}
+                          </span>
+                        </div>
+                      )}
 
                       {/* Match header */}
                       <div className="flex items-center gap-1.5 md:gap-1">
