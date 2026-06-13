@@ -60,6 +60,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
   // ── Inline pick state ──
   const [pickState, setPickState] = useState<Record<string, {
     betType: string; side: string | null; confidence: number; submitting: boolean; done: boolean; error: string | null
+    homeScore: number; awayScore: number
   }>>({})
 
   function getPickState(matchId: string, match: UpcomingMatch) {
@@ -73,6 +74,8 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
       submitting: false,
       done: match.hasPick,
       error: null,
+      homeScore: match.myPick?.homeScore ?? 0,
+      awayScore: match.myPick?.awayScore ?? 0,
     }
   }
 
@@ -85,17 +88,24 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
 
   async function submitPick(match: UpcomingMatch) {
     const ps = getPickState(match.id, match)
-    if (!ps.side) return
+    // exact bet cần side = "exact", ah/ou cần side thật
+    if (ps.betType !== "exact" && !ps.side) return
     setPick(match.id, "submitting", true)
     setPick(match.id, "error", null)
     try {
+      const body: Record<string, unknown> = {
+        matchId: match.id, groupId: group.id, betType: ps.betType,
+        side: ps.betType === "exact" ? "exact" : ps.side,
+        confidence: ps.confidence ?? 1,
+      }
+      if (ps.betType === "exact") {
+        body.homeScore = ps.homeScore
+        body.awayScore = ps.awayScore
+      }
       const res = await fetch("/api/predictions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          matchId: match.id, groupId: group.id, betType: ps.betType, side: ps.side,
-          confidence: ps.confidence ?? 1,
-        }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -475,9 +485,9 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                         <div className="text-xs text-white/40 text-center py-1">Kèo chưa đủ thông tin</div>
                       ) : (
                         <div className="space-y-2 md:space-y-1.5">
-                          {match.allowedBetTypes.filter(t => t !== "exact").length > 1 && (
+                          {match.allowedBetTypes.length > 1 && (
                             <div className="flex gap-1.5 md:gap-1">
-                              {[{ id: "ah", label: "Kèo chấp" }, { id: "ou", label: "Tổng bàn thắng" }]
+                              {[{ id: "ah", label: "Kèo chấp" }, { id: "ou", label: "Tổng bàn" }, { id: "exact", label: "Tỉ số" }]
                                 .filter(bt => match.allowedBetTypes.includes(bt.id))
                                 .map(bt => (
                                   <button key={bt.id} onClick={() => setPick(match.id, "betType", bt.id)}
@@ -534,6 +544,42 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                             </div>
                           )}
 
+                          {ps.betType === "exact" && (
+                            <div className="flex items-center justify-center gap-3 py-1">
+                              <div className="flex items-center gap-2">
+                                <div className="relative w-7 h-5 rounded overflow-hidden flex-shrink-0">
+                                  <Image src={flagUrl(match.homeFlag)} alt="" fill className="object-cover" unoptimized />
+                                </div>
+                                <span className="text-[10px] font-bold text-white/70 max-w-[60px] truncate">{match.homeTeam}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <button onClick={() => setPick(match.id, "homeScore", Math.max(0, ps.homeScore - 1))}
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/50 hover:text-white transition-colors"
+                                  style={{ background: "rgba(255,255,255,0.06)" }}>−</button>
+                                <span className="text-lg font-black text-[#00e676] w-6 text-center">{ps.homeScore}</span>
+                                <button onClick={() => setPick(match.id, "homeScore", ps.homeScore + 1)}
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/50 hover:text-white transition-colors"
+                                  style={{ background: "rgba(255,255,255,0.06)" }}>+</button>
+                              </div>
+                              <span className="text-white/20 font-bold">–</span>
+                              <div className="flex items-center gap-1.5">
+                                <button onClick={() => setPick(match.id, "awayScore", Math.max(0, ps.awayScore - 1))}
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/50 hover:text-white transition-colors"
+                                  style={{ background: "rgba(255,255,255,0.06)" }}>−</button>
+                                <span className="text-lg font-black text-[#00e676] w-6 text-center">{ps.awayScore}</span>
+                                <button onClick={() => setPick(match.id, "awayScore", ps.awayScore + 1)}
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/50 hover:text-white transition-colors"
+                                  style={{ background: "rgba(255,255,255,0.06)" }}>+</button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-white/70 max-w-[60px] truncate">{match.awayTeam}</span>
+                                <div className="relative w-7 h-5 rounded overflow-hidden flex-shrink-0">
+                                  <Image src={flagUrl(match.awayFlag)} alt="" fill className="object-cover" unoptimized />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           {ps.error && <p className="text-xs md:text-[10px] text-red-400 px-1">{ps.error}</p>}
 
                           <HopeStarPicker
@@ -544,9 +590,9 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
 
                           <div className="flex gap-2 md:gap-1.5">
                             <button onClick={() => submitPick(match)}
-                              disabled={ps.submitting || !ps.side}
+                              disabled={ps.submitting || (ps.betType !== "exact" && !ps.side)}
                               className="flex-1 py-2 md:py-1.5 rounded-xl md:rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 md:gap-1 transition-all disabled:opacity-40"
-                              style={ps.side
+                              style={ps.side || ps.betType === "exact"
                                 ? { background: "linear-gradient(135deg,#00e676,#00bcd4)", color: "#0f1117" }
                                 : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)" }}>
                               {ps.submitting ? <Loader2 size={13} className="md:w-3 md:h-3 animate-spin"/> : <Zap size={13} className="md:w-3 md:h-3"/>}
