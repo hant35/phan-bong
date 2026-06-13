@@ -52,7 +52,7 @@ export default async function MatchDetailPage({ params, searchParams }: MatchDet
   const selectedGroupId = userGroups.some(g => g.id === requestedGroupId) ? requestedGroupId : fallbackGroupId
   const groupConfig = selectedGroupId ? await prisma.groupMatchConfig.findUnique({
     where: { groupId_matchId: { groupId: selectedGroupId, matchId: m.id } },
-    select: { blindMode: true },
+    select: { blindMode: true, ahLine: true, ouLine: true },
   }) : null
   const blindModeActive = !!groupConfig?.blindMode && m.status === "scheduled" && m.kickoffAt > new Date()
   const groupPredictions = selectedGroupId ? m.predictions.filter(p => p.groupId === selectedGroupId) : m.predictions
@@ -72,7 +72,7 @@ export default async function MatchDetailPage({ params, searchParams }: MatchDet
     homeColor: m.homeColor, awayColor: m.awayColor,
     kickoffAt: m.kickoffAt.toISOString(), stage: m.stage, venue: m.venue,
     status: m.status, scoreHome: m.scoreHome, scoreAway: m.scoreAway, minute: m.minute,
-    ahLine: m.ahLine, ouLine: m.ouLine,
+    ahLine: groupConfig?.ahLine ?? m.ahLine, ouLine: groupConfig?.ouLine ?? m.ouLine,
     weather: m.weatherIcon ? { icon: m.weatherIcon, temp: m.weatherTemp, condition: m.weatherCond } : null,
     h2h: m.h2hHome !== null ? {
       home: m.h2hHome, draw: m.h2hDraw, away: m.h2hAway,
@@ -89,6 +89,7 @@ export default async function MatchDetailPage({ params, searchParams }: MatchDet
       name: p.user.name, avatar: p.user.avatar ?? "??", streak: p.user.streak,
       side: p.side, betType: p.betType, confidence: p.confidence,
       homeScore: p.homeScore, awayScore: p.awayScore,
+      result: p.result as string | null, points: p.points,
     })),
     nonPredictors: await (async () => {
       if (!selectedGroupId || blindModeActive) return []

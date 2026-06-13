@@ -22,7 +22,7 @@ interface Match {
   blindModeActive: boolean
   consensus?: { home: number; draw: number; away: number } | null
   predictorsCount: number
-  predictors: { name: string; avatar: string; streak: number; side: string | null; betType: string; confidence: number; homeScore?: number | null; awayScore?: number | null }[]
+  predictors: { name: string; avatar: string; streak: number; side: string | null; betType: string; confidence: number; homeScore?: number | null; awayScore?: number | null; result?: string | null; points?: number | null }[]
   nonPredictors: { name: string; avatar: string }[]
   myPick?: { betType: string; side?: string | null; homeScore?: number | null; awayScore?: number | null; confidence: number; result?: string | null; points: number } | null
 }
@@ -209,6 +209,15 @@ export function MatchDetailView({ match, currentUserId, isInGroup, userGroups }:
               </span>
             </div>
 
+            {match.status === "finished" && match.ahLine !== null && (
+              <div className="flex items-center gap-2 mb-3 px-2 py-1.5 rounded-lg" style={{ background: "rgba(0,230,118,0.05)", border: "1px solid rgba(0,230,118,0.1)" }}>
+                <span className="text-[10px] font-bold text-white/30">Kèo chấp:</span>
+                <span className="text-[10px] font-bold" style={{ color: "#00e676" }}>
+                  {match.ahLine! < 0 ? match.homeTeam : match.ahLine! > 0 ? match.awayTeam : "Đồng banh"} chấp {Math.abs(match.ahLine!)}
+                </span>
+              </div>
+            )}
+
             {match.predictors.length > 0 ? (
               <div className="space-y-2 mb-4">
                 {match.predictors.map((p, i) => {
@@ -234,8 +243,13 @@ export function MatchDetailView({ match, currentUserId, isInGroup, userGroups }:
                           {betLabel} · {pickLabel}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         <span className="text-[11px] text-[#ffd700]">{"⭐".repeat(p.confidence)}</span>
+                        {p.result && (
+                          <span className="text-[11px] font-black" style={{ color: p.result === "win" ? "#00e676" : "#ff5252" }}>
+                            {p.result === "win" ? "✅" : "❌"} {(p.points ?? 0) > 0 ? `+${p.points}` : p.points}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )
