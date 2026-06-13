@@ -2,10 +2,27 @@ import { notFound, redirect } from "next/navigation"
 import { Suspense } from "react"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
+import { getDefaultGroupId } from "@/lib/default-group"
 import { MatchDetailView } from "./view"
 
-export default async function MatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
+type MatchDetailPageProps = {
+  params: Promise<{ id: string }>
+  searchParams?: Promise<{ from?: string | string[] }>
+}
+
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value
+}
+
+function groupIdFromBackUrl(backUrl: string | undefined) {
+  if (!backUrl?.startsWith("/groups/")) return null
+  return backUrl.split("/groups/")[1]?.split("/")[0] ?? null
+}
+
+export default async function MatchDetailPage({ params, searchParams }: MatchDetailPageProps) {
   const { id } = await params
+  const query = searchParams ? await searchParams : {}
+  const requestedGroupId = groupIdFromBackUrl(firstParam(query.from))
   const user = await getCurrentUser()
   if (!user) redirect("/login")
 
@@ -20,13 +37,6 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   })
   if (!m) notFound()
 
-  const total = m.predictions.length || 1
-  const home = m.predictions.filter(p => p.side === "home" || (p.betType === "exact" && (p.homeScore ?? 0) > (p.awayScore ?? 0))).length
-  const away = m.predictions.filter(p => p.side === "away" || (p.betType === "exact" && (p.homeScore ?? 0) < (p.awayScore ?? 0))).length
-  const draw = m.predictions.length - home - away
-
-  const commentCount = await prisma.comment.count({ where: { matchId: id } })
-
   const userMemberships = await prisma.groupMember.findMany({
     where: { userId: user.id },
     orderBy: { joinedAt: "asc" },
@@ -35,9 +45,24 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   const isInGroup = userMemberships.length > 0
   const userGroups = userMemberships.map(mem => ({ id: mem.group.id, name: mem.group.name }))
 
-  // Lấy pick của user từ group đầu tiên
-  const firstGroupId = userGroups[0]?.id
-  const myPick = m.predictions.find(p => p.userId === user.id && (!firstGroupId || p.groupId === firstGroupId))
+  const defaultGroupId = await getDefaultGroupId(user.id)
+  const fallbackGroupId = defaultGroupId && userGroups.some(g => g.id === defaultGroupId)
+    ? defaultGroupId
+    : userGroups[0]?.id
+  const selectedGroupId = userGroups.some(g => g.id === requestedGroupId) ? requestedGroupId : fallbackGroupId
+  const groupConfig = selectedGroupId ? await prisma.groupMatchConfig.findUnique({
+    where: { groupId_matchId: { groupId: selectedGroupId, matchId: m.id } },
+    select: { blindMode: true },
+  }) : null
+  const blindModeActive = !!groupConfig?.blindMode && m.status === "scheduled" && m.kickoffAt > new Date()
+  const groupPredictions = selectedGroupId ? m.predictions.filter(p => p.groupId === selectedGroupId) : m.predictions
+  const visiblePredictions = blindModeActive ? [] : groupPredictions
+  const myPick = m.predictions.find(p => p.userId === user.id && (!selectedGroupId || p.groupId === selectedGroupId))
+
+  const total = visiblePredictions.length || 1
+  const home = visiblePredictions.filter(p => p.side === "home" || (p.betType === "exact" && (p.homeScore ?? 0) > (p.awayScore ?? 0))).length
+  const away = visiblePredictions.filter(p => p.side === "away" || (p.betType === "exact" && (p.homeScore ?? 0) < (p.awayScore ?? 0))).length
+  const draw = visiblePredictions.length - home - away
 
   const data = {
     id: m.id,
@@ -52,16 +77,30 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       home: m.h2hHome, draw: m.h2hDraw, away: m.h2hAway,
       recent: m.h2hRecent ? (m.h2hRecent.startsWith("[") ? JSON.parse(m.h2hRecent) : m.h2hRecent.split("")) : [],
     } : null,
-    consensus: m.predictions.length > 0 ? {
+    blindModeActive,
+    consensus: visiblePredictions.length > 0 ? {
       home: Math.round(home / total * 100),
       draw: Math.round(draw / total * 100),
       away: Math.round(away / total * 100),
     } : null,
-    predictorsCount: m.predictions.length,
-    predictors: m.predictions.slice(0, 8).map(p => ({
+    predictorsCount: visiblePredictions.length,
+    predictors: visiblePredictions.map(p => ({
       name: p.user.name, avatar: p.user.avatar ?? "??", streak: p.user.streak,
       side: p.side, betType: p.betType, confidence: p.confidence,
+      homeScore: p.homeScore, awayScore: p.awayScore,
     })),
+    nonPredictors: await (async () => {
+      if (!selectedGroupId) return []
+      const members = await prisma.groupMember.findMany({
+        where: { groupId: selectedGroupId },
+        include: { user: { select: { id: true, name: true, avatar: true } } },
+        orderBy: { joinedAt: "asc" },
+      })
+      const predictedIds = new Set(visiblePredictions.map(p => p.userId))
+      return members
+        .filter(mem => !predictedIds.has(mem.userId))
+        .map(mem => ({ name: mem.user.name, avatar: mem.user.avatar ?? "??" }))
+    })(),
     myPick: myPick ? {
       betType: myPick.betType, side: myPick.side,
       homeScore: myPick.homeScore, awayScore: myPick.awayScore,
@@ -74,7 +113,6 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       <MatchDetailView
         match={data}
         currentUserId={user.id}
-        commentCount={commentCount}
         isInGroup={isInGroup}
         userGroups={userGroups}
       />
