@@ -32,7 +32,8 @@ interface Match {
   blindModeActive: boolean
   consensus?: { home: number; draw: number; away: number } | null
   predictorsCount: number
-  predictors: { name: string; avatar: string; streak: number; side: string | null; betType: string; confidence: number }[]
+  predictors: { name: string; avatar: string; streak: number; side: string | null; betType: string; confidence: number; homeScore?: number | null; awayScore?: number | null }[]
+  nonPredictors: { name: string; avatar: string }[]
   myPick?: { betType: string; side?: string | null; homeScore?: number | null; awayScore?: number | null; confidence: number; result?: string | null; points: number } | null
 }
 
@@ -478,35 +479,71 @@ export function MatchDetailView({ match, currentUserId, isInGroup, userGroups }:
             </div>
           </div>
 
-          {match.predictors.length > 0 && (
+          {(match.predictors.length > 0 || match.nonPredictors.length > 0) && (
             <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
               <div className="flex items-center gap-2 mb-3">
                 <Flame size={13} className="text-orange-400" />
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Cao thủ đã đoán trận này</span>
+                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                  Đã đoán ({match.predictors.length})
+                </span>
               </div>
-              <div className="space-y-2">
-                {match.predictors.map((p, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <span className="text-xs font-black text-white/30 w-4">#{i+1}</span>
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black"
-                      style={{ background: "linear-gradient(135deg, #7c3aed, #ec4899)", color: "white" }}>
-                      {p.avatar}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-bold text-white truncate">{p.name}</div>
-                      <div className="text-[10px] text-white/30">
-                        Chọn {p.side === "home" ? match.homeTeam : p.side === "away" ? match.awayTeam : "Hòa"} · {p.betType.toUpperCase()}
-                        {p.streak > 0 && <span className="text-orange-400 ml-1.5 inline-flex items-center gap-0.5"><Flame size={9}/>{p.streak}</span>}
+
+              {match.predictors.length > 0 ? (
+                <div className="space-y-2 mb-4">
+                  {match.predictors.map((p, i) => {
+                    const pickLabel = p.betType === "exact"
+                      ? `Tỉ số: ${p.homeScore ?? 0}–${p.awayScore ?? 0}`
+                      : p.betType === "ou"
+                      ? (p.side === "over" ? "Trên" : "Dưới")
+                      : p.side === "home" ? match.homeTeam : p.side === "away" ? match.awayTeam : "Hòa"
+                    const betLabel = p.betType === "ah" ? "Chấp" : p.betType === "ou" ? "Tổng bàn" : p.betType === "exact" ? "Tỉ số" : p.betType.toUpperCase()
+                    return (
+                      <div key={i} className="flex items-center gap-3 py-1">
+                        <span className="text-xs font-black text-white/25 w-5 flex-shrink-0">#{i+1}</span>
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black flex-shrink-0"
+                          style={{ background: "linear-gradient(135deg, #7c3aed, #ec4899)", color: "white" }}>
+                          {p.avatar}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold text-white truncate flex items-center gap-1.5">
+                            {p.name}
+                            {p.streak > 0 && <span className="text-orange-400 inline-flex items-center gap-0.5"><Flame size={9}/>{p.streak}</span>}
+                          </div>
+                          <div className="text-[10px] text-white/35 truncate">
+                            {betLabel} · {pickLabel}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <span className="text-[11px] text-[#ffd700]">{"⭐".repeat(p.confidence)}</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-0.5">
-                      {[1,2,3,4,5].map(c => (
-                        <div key={c} className="w-1 h-3 rounded-sm" style={{ background: c <= p.confidence ? "#00e676" : "rgba(255,255,255,0.08)" }}/>
-                      ))}
-                    </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-white/30 mb-4">Chưa có ai đoán</p>
+              )}
+
+              {match.nonPredictors.length > 0 && (
+                <>
+                  <div className="border-t border-white/5 pt-3 mb-2">
+                    <span className="text-[10px] font-bold text-white/25 uppercase tracking-widest">
+                      Chưa đoán ({match.nonPredictors.length})
+                    </span>
                   </div>
-                ))}
-              </div>
+                  <div className="space-y-1.5">
+                    {match.nonPredictors.map((u, i) => (
+                      <div key={i} className="flex items-center gap-3 py-0.5 opacity-50">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[9px] font-black flex-shrink-0"
+                          style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>
+                          {u.avatar}
+                        </div>
+                        <span className="text-xs text-white/40 truncate">{u.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

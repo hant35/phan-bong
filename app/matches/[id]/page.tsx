@@ -84,10 +84,23 @@ export default async function MatchDetailPage({ params, searchParams }: MatchDet
       away: Math.round(away / total * 100),
     } : null,
     predictorsCount: visiblePredictions.length,
-    predictors: visiblePredictions.slice(0, 8).map(p => ({
+    predictors: visiblePredictions.map(p => ({
       name: p.user.name, avatar: p.user.avatar ?? "??", streak: p.user.streak,
       side: p.side, betType: p.betType, confidence: p.confidence,
+      homeScore: p.homeScore, awayScore: p.awayScore,
     })),
+    nonPredictors: await (async () => {
+      if (!selectedGroupId) return []
+      const members = await prisma.groupMember.findMany({
+        where: { groupId: selectedGroupId },
+        include: { user: { select: { id: true, name: true, avatar: true } } },
+        orderBy: { joinedAt: "asc" },
+      })
+      const predictedIds = new Set(visiblePredictions.map(p => p.userId))
+      return members
+        .filter(mem => !predictedIds.has(mem.userId))
+        .map(mem => ({ name: mem.user.name, avatar: mem.user.avatar ?? "??" }))
+    })(),
     myPick: myPick ? {
       betType: myPick.betType, side: myPick.side,
       homeScore: myPick.homeScore, awayScore: myPick.awayScore,
