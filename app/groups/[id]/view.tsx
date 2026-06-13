@@ -545,36 +545,46 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                           )}
 
                           {ps.betType === "exact" && (
-                            <div className="flex items-center justify-center gap-3 py-1">
-                              <div className="flex items-center gap-2">
-                                <div className="relative w-7 h-5 rounded overflow-hidden flex-shrink-0">
-                                  <Image src={flagUrl(match.homeFlag)} alt="" fill className="object-cover" unoptimized />
+                            <div className="rounded-xl py-3 px-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                              <div className="flex items-center justify-center gap-4">
+                                {/* Home side */}
+                                <div className="flex flex-col items-center gap-1.5 flex-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="relative w-6 h-4 rounded overflow-hidden flex-shrink-0">
+                                      <Image src={flagUrl(match.homeFlag)} alt="" fill className="object-cover" unoptimized />
+                                    </div>
+                                    <span className="text-[10px] font-bold text-white/60 truncate max-w-[70px]">{match.homeTeam}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <button onClick={() => setPick(match.id, "homeScore", Math.max(0, ps.homeScore - 1))}
+                                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
+                                      style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
+                                    <span className="text-2xl font-black text-[#00e676] w-8 text-center">{ps.homeScore}</span>
+                                    <button onClick={() => setPick(match.id, "homeScore", ps.homeScore + 1)}
+                                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
+                                      style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
+                                  </div>
                                 </div>
-                                <span className="text-[10px] font-bold text-white/70 max-w-[60px] truncate">{match.homeTeam}</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <button onClick={() => setPick(match.id, "homeScore", Math.max(0, ps.homeScore - 1))}
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/50 hover:text-white transition-colors"
-                                  style={{ background: "rgba(255,255,255,0.06)" }}>−</button>
-                                <span className="text-lg font-black text-[#00e676] w-6 text-center">{ps.homeScore}</span>
-                                <button onClick={() => setPick(match.id, "homeScore", ps.homeScore + 1)}
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/50 hover:text-white transition-colors"
-                                  style={{ background: "rgba(255,255,255,0.06)" }}>+</button>
-                              </div>
-                              <span className="text-white/20 font-bold">–</span>
-                              <div className="flex items-center gap-1.5">
-                                <button onClick={() => setPick(match.id, "awayScore", Math.max(0, ps.awayScore - 1))}
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/50 hover:text-white transition-colors"
-                                  style={{ background: "rgba(255,255,255,0.06)" }}>−</button>
-                                <span className="text-lg font-black text-[#00e676] w-6 text-center">{ps.awayScore}</span>
-                                <button onClick={() => setPick(match.id, "awayScore", ps.awayScore + 1)}
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/50 hover:text-white transition-colors"
-                                  style={{ background: "rgba(255,255,255,0.06)" }}>+</button>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-bold text-white/70 max-w-[60px] truncate">{match.awayTeam}</span>
-                                <div className="relative w-7 h-5 rounded overflow-hidden flex-shrink-0">
-                                  <Image src={flagUrl(match.awayFlag)} alt="" fill className="object-cover" unoptimized />
+
+                                <span className="text-xl font-black text-white/15 mt-4">:</span>
+
+                                {/* Away side */}
+                                <div className="flex flex-col items-center gap-1.5 flex-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] font-bold text-white/60 truncate max-w-[70px]">{match.awayTeam}</span>
+                                    <div className="relative w-6 h-4 rounded overflow-hidden flex-shrink-0">
+                                      <Image src={flagUrl(match.awayFlag)} alt="" fill className="object-cover" unoptimized />
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <button onClick={() => setPick(match.id, "awayScore", Math.max(0, ps.awayScore - 1))}
+                                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
+                                      style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
+                                    <span className="text-2xl font-black text-[#00e676] w-8 text-center">{ps.awayScore}</span>
+                                    <button onClick={() => setPick(match.id, "awayScore", ps.awayScore + 1)}
+                                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
+                                      style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
+                                  </div>
                                 </div>
                               </div>
                             </div>
