@@ -545,37 +545,23 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                           )}
 
                           {ps.betType === "exact" && (
-                            <div className="rounded-xl py-3 px-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                              <div className="flex items-center justify-center gap-4">
-                                {/* Home side */}
-                                <div className="flex items-center gap-2">
-                                  <div className="relative w-8 h-6 rounded overflow-hidden flex-shrink-0">
-                                    <Image src={flagUrl(match.homeFlag)} alt="" fill className="object-cover" unoptimized />
-                                  </div>
-                                  <button onClick={() => setPick(match.id, "homeScore", Math.max(0, ps.homeScore - 1))}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
-                                    style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
-                                  <span className="text-2xl font-black text-[#00e676] w-6 text-center">{ps.homeScore}</span>
-                                  <button onClick={() => setPick(match.id, "homeScore", ps.homeScore + 1)}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
-                                    style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
-                                </div>
-
+                            <div className="rounded-xl py-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                              <div className="flex items-center justify-center gap-3">
+                                <button onClick={() => setPick(match.id, "homeScore", Math.max(0, ps.homeScore - 1))}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
+                                  style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
+                                <span className="text-2xl font-black text-[#00e676] w-6 text-center">{ps.homeScore}</span>
+                                <button onClick={() => setPick(match.id, "homeScore", ps.homeScore + 1)}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
+                                  style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
                                 <span className="text-xl font-black text-white/15">:</span>
-
-                                {/* Away side */}
-                                <div className="flex items-center gap-2">
-                                  <button onClick={() => setPick(match.id, "awayScore", Math.max(0, ps.awayScore - 1))}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
-                                    style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
-                                  <span className="text-2xl font-black text-[#00e676] w-6 text-center">{ps.awayScore}</span>
-                                  <button onClick={() => setPick(match.id, "awayScore", ps.awayScore + 1)}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
-                                    style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
-                                  <div className="relative w-8 h-6 rounded overflow-hidden flex-shrink-0">
-                                    <Image src={flagUrl(match.awayFlag)} alt="" fill className="object-cover" unoptimized />
-                                  </div>
-                                </div>
+                                <button onClick={() => setPick(match.id, "awayScore", Math.max(0, ps.awayScore - 1))}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
+                                  style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
+                                <span className="text-2xl font-black text-[#00e676] w-6 text-center">{ps.awayScore}</span>
+                                <button onClick={() => setPick(match.id, "awayScore", ps.awayScore + 1)}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
+                                  style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
                               </div>
                             </div>
                           )}
