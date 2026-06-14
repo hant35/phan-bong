@@ -245,13 +245,15 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
       continue
     }
     const cfg = configMap[pred.groupId] ?? {}
+    const effAhLine = cfg.ahLine ?? match.ahLine
+    const effOuLine = cfg.ouLine ?? match.ouLine
     const { result, reason } = evaluatePrediction(
       { betType: pred.betType, side: pred.side, homeScore: pred.homeScore, awayScore: pred.awayScore },
       {
         scoreHome: match.scoreHome,
         scoreAway: match.scoreAway,
-        ahLine: cfg.ahLine ?? match.ahLine,
-        ouLine: cfg.ouLine ?? match.ouLine,
+        ahLine: effAhLine,
+        ouLine: effOuLine,
       },
     )
 
@@ -259,9 +261,10 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
     const baseDelta = hopeStarDelta(pred.confidence, result)
     const pointsDelta = applyPointsMultiplier(baseDelta, multiplier)
 
+    // Lưu kèo thực tế dùng lúc chấm → truy vết được nếu kèo bị sửa sau khi đã chấm
     await prisma.prediction.update({
       where: { id: pred.id },
-      data: { result, points: pointsDelta },
+      data: { result, points: pointsDelta, gradedAt: new Date(), gradedAhLine: effAhLine, gradedOuLine: effOuLine },
     })
 
     await applyHopeStarPoints(pred.userId, pred.groupId, pointsDelta, result)
