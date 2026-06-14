@@ -42,7 +42,7 @@ export default async function GroupAdminPage({ params }: { params: Promise<{ id:
   const upcomingMatches = await prisma.match.findMany({
     where: {
       status: "scheduled",
-      kickoffAt: { gt: new Date(Date.now() + 30 * 60 * 1000) },
+      kickoffAt: { gt: new Date(Date.now() + 5 * 60 * 1000) },
     },
     orderBy: { kickoffAt: "asc" },
     take: 20,

@@ -5,7 +5,7 @@ import { notifyUser } from "@/lib/notify"
 
 type Params = { params: Promise<{ id: string }> }
 
-const THIRTY_MIN = 30 * 60 * 1000
+const LOCK_BEFORE_KICKOFF = 5 * 60 * 1000
 
 async function isGroupAdmin(userId: string, groupId: string) {
   const m = await prisma.groupMember.findUnique({
@@ -67,8 +67,8 @@ export async function POST(req: NextRequest, { params }: Params) {
   const match = await prisma.match.findUnique({ where: { id: matchId } })
   if (!match) return NextResponse.json({ error: "Trận không tồn tại" }, { status: 404 })
 
-  if (match.kickoffAt.getTime() - Date.now() < THIRTY_MIN) {
-    return NextResponse.json({ error: "Không thể điều chỉnh kèo trong vòng 30 phút trước khi trận bắt đầu" }, { status: 400 })
+  if (match.kickoffAt.getTime() - Date.now() < LOCK_BEFORE_KICKOFF) {
+    return NextResponse.json({ error: "Không thể điều chỉnh kèo trong vòng 5 phút trước khi trận bắt đầu" }, { status: 400 })
   }
   if (match.status !== "scheduled") {
     return NextResponse.json({ error: "Trận đã bắt đầu hoặc kết thúc" }, { status: 400 })

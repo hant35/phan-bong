@@ -213,7 +213,7 @@ export function GroupAdminView({
         <div className="space-y-3">
           <p className="text-xs text-white/30 px-1">
             Điều chỉnh kèo, hệ số điểm, chế độ khóa sớm và blind mode riêng cho hội.
-            Chỉ được chỉnh trước 30 phút trước khi trận bắt đầu.
+            Chỉ được chỉnh trước 5 phút trước khi trận bắt đầu.
           </p>
           {upcomingMatches.length === 0 ? (
             <div className="text-center py-12 text-white/20 text-sm">Không có trận sắp tới để cấu hình</div>
