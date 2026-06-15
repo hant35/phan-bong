@@ -867,7 +867,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
             const resolved = m.wins + m.losses + m.skipped
             const winRate = resolved > 0 ? Math.round(m.wins / resolved * 100) : 0
             return (
-              <div key={m.userId} className="rounded-2xl p-3 flex items-center gap-3"
+              <Link key={m.userId} href={m.isMe ? "/profile" : `/profile/${m.userId}`} className="rounded-2xl p-3 flex items-center gap-3 hover:opacity-80 transition-opacity"
                 style={{ background: m.isMe ? "rgba(0,230,118,0.05)" : "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0"
                   style={{ background: avatarGradients[i % avatarGradients.length], color: "white" }}>{m.avatar}</div>
@@ -905,7 +905,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                   <div className={cn("text-sm font-black", m.isMe ? "text-[#00e676]" : "text-white/70")}>{m.points}</div>
                   <div className="text-[10px] text-white/50">#{m.rank}</div>
                 </div>
-              </div>
+              </Link>
             )
           })}
         </div>
