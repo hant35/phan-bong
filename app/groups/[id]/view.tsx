@@ -46,9 +46,15 @@ interface UpcomingMatch {
   myPick: { betType: string; side: string | null; homeScore: number | null; awayScore: number | null; confidence: number } | null
 }
 
-export function GroupDetailView({ group, currentUserId, myRole, members, activities, upcomingMatches, stats, champion }: {
+interface FunStats {
+  topEditors: { userId: string; name: string; avatar: string; totalEdits: number }[];
+  lastMinuters: { userId: string; name: string; avatar: string; avgMinutes: number }[];
+}
+
+export function GroupDetailView({ group, currentUserId, myRole, members, activities, upcomingMatches, stats, funStats, champion }: {
   group: Group; currentUserId: string; myRole: string; members: Member[]; activities: Activity[]; upcomingMatches: UpcomingMatch[];
   stats: { totalPicks: number; winRate: number; activityPerDay: number };
+  funStats: FunStats;
   champion: { name: string; displayName: string; avatar: string; points: number; correct: number; total: number; streak: number } | null;
 }) {
   const router = useRouter()
@@ -289,6 +295,52 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
               </div>
             ))}
           </div>
+
+          {/* Thống kê vui */}
+          {(funStats.topEditors.length > 0 || funStats.lastMinuters.length > 0) && (
+            <div className="rounded-3xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center gap-1.5 px-4 pt-4 pb-2">
+                <Sparkles size={13} className="text-[#ffd700]" />
+                <h3 className="font-bold text-white text-xs md:text-sm">Thống kê vui</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-2 px-3 pb-3">
+                {funStats.topEditors.length > 0 && (
+                  <div className="rounded-2xl p-3 space-y-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <div className="text-[10px] text-white/40 font-bold uppercase tracking-wide">🔄 Hay đổi ý nhất</div>
+                    {funStats.topEditors.map((u, i) => (
+                      <div key={u.userId} className="flex items-center gap-2">
+                        <span className="text-[10px] text-white/30 w-3">{i + 1}</span>
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black flex-shrink-0"
+                          style={{ background: avatarGradients[i % avatarGradients.length], color: "#0f1117" }}>
+                          {u.avatar}
+                        </div>
+                        <span className="text-xs text-white/80 flex-1 truncate">{u.name}</span>
+                        <span className="text-xs font-black" style={{ color: "#ec4899" }}>{u.totalEdits}×</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {funStats.lastMinuters.length > 0 && (
+                  <div className="rounded-2xl p-3 space-y-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <div className="text-[10px] text-white/40 font-bold uppercase tracking-wide">⏱️ Sát giờ nhất</div>
+                    {funStats.lastMinuters.map((u, i) => (
+                      <div key={u.userId} className="flex items-center gap-2">
+                        <span className="text-[10px] text-white/30 w-3">{i + 1}</span>
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black flex-shrink-0"
+                          style={{ background: avatarGradients[i % avatarGradients.length], color: "#0f1117" }}>
+                          {u.avatar}
+                        </div>
+                        <span className="text-xs text-white/80 flex-1 truncate">{u.name}</span>
+                        <span className="text-xs font-black" style={{ color: "#ffd700" }}>
+                          {u.avgMinutes < 60 ? `${u.avgMinutes}ph` : `${Math.round(u.avgMinutes / 60)}h`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Trận đang diễn ra + sắp tới */}
           {upcomingMatches.length === 0 ? (

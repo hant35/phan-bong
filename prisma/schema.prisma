@@ -152,10 +152,11 @@ model Prediction {
   editCount  Int      @default(0)
   result     String?
   points     Int      @default(0)
-  createdAt  DateTime @default(now())
-  gradedAt   DateTime?            // thời điểm prediction được chấm (null = chưa chấm)
-  gradedAhLine Float?             // kèo chấp thực tế dùng lúc chấm (để truy vết khi kèo bị sửa sau)
-  gradedOuLine Float?             // kèo tổng bàn thực tế dùng lúc chấm
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  gradedAt     DateTime?
+  gradedAhLine Float?
+  gradedOuLine Float?
   match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   group      Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
