@@ -60,6 +60,11 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
   const router = useRouter()
   const [tab, setTab] = useState<"overview" | "leaderboard" | "activity" | "matches" | "members">("overview")
   const [copied, setCopied] = useState(false)
+  const [sortMode, setSortMode] = useState<"points" | "wins">("points")
+
+  const sortedMembers = sortMode === "wins"
+    ? [...members].sort((a, b) => b.wins - a.wins || b.points - a.points)
+    : members
 
   const isGroupAdmin = myRole === "owner" || myRole === "admin"
 
@@ -701,19 +706,33 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
       )}
 
       {tab === "leaderboard" && (
+        <div className="space-y-2">
+        {/* Tùy chọn xếp hạng */}
+        <div className="flex gap-1 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)" }}>
+          {([
+            { id: "points", label: "🏆 Theo điểm" },
+            { id: "wins", label: "✅ Theo số lần đúng" },
+          ] as const).map(o => (
+            <button key={o.id} onClick={() => setSortMode(o.id)}
+              className={cn("flex-1 py-2 text-xs font-bold rounded-xl transition-all", sortMode === o.id ? "text-white" : "text-white/30")}
+              style={sortMode === o.id ? { background: "rgba(255,255,255,0.08)" } : {}}>
+              {o.label}
+            </button>
+          ))}
+        </div>
         <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
           {/* Header */}
           <div className="flex items-center px-3 py-2.5" style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             <div className="w-7 sm:w-8 text-center text-[10px] font-bold text-white/30">#</div>
             <div className="flex-1 text-[10px] font-bold text-white/30 pl-1">Thành viên</div>
-            <div className="w-8 sm:w-10 text-center text-[10px] font-bold text-white/30">Đoán</div>
+            <div className="w-9 sm:w-12 text-center text-[10px] font-bold text-white/30">Đã đoán</div>
             <div className="w-8 sm:w-10 text-center text-[10px] font-bold" style={{ color: "rgba(0,230,118,0.5)" }}>Đúng</div>
             <div className="w-8 sm:w-10 text-center text-[10px] font-bold" style={{ color: "rgba(255,82,82,0.5)" }}>Sai</div>
-            <div className="w-8 sm:w-10 text-center text-[10px] font-bold" style={{ color: "rgba(255,152,0,0.5)" }}>Bỏ</div>
             <div className="w-10 sm:w-12 text-center text-[10px] font-bold text-white/30">Điểm</div>
           </div>
           {/* Rows */}
-          {members.map((m, i) => {
+          {sortedMembers.map((m, i) => {
+            const wrong = m.losses + m.skipped
             return (
               <div key={m.userId}
                 className={cn("flex items-center px-3 py-2.5 transition-colors", i < members.length - 1 ? "border-b border-white/5" : "")}
@@ -730,9 +749,9 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                           : i === 1 ? "linear-gradient(135deg, #b0bec5, #78909c)"
                           : "linear-gradient(135deg, #cd7f32, #8d4e0b)",
                         color: "#0f1117"
-                      }}>{i === 0 ? <Crown size={10}/> : m.rank}</div>
+                      }}>{i === 0 ? <Crown size={10}/> : i + 1}</div>
                   ) : (
-                    <span className="text-xs font-bold text-white/50">{m.rank}</span>
+                    <span className="text-xs font-bold text-white/50">{i + 1}</span>
                   )}
                 </div>
                 {/* Avatar + Name */}
@@ -753,19 +772,18 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                     )}
                   </div>
                 </div>
-                {/* Đoán */}
-                <div className="w-8 sm:w-10 text-center text-[11px] sm:text-xs font-semibold text-white/40">{m.predicted}</div>
+                {/* Đã đoán */}
+                <div className="w-9 sm:w-12 text-center text-[11px] sm:text-xs font-semibold text-white/40">{m.predicted}</div>
                 {/* Đúng */}
-                <div className="w-8 sm:w-10 text-center text-[11px] sm:text-xs font-bold" style={{ color: "#00e676" }}>{m.wins}</div>
-                {/* Sai */}
-                <div className="w-8 sm:w-10 text-center text-[11px] sm:text-xs font-bold" style={{ color: "#ff5252" }}>{m.losses}</div>
-                {/* Bỏ */}
-                <div className="w-8 sm:w-10 text-center text-[11px] sm:text-xs font-bold" style={{ color: m.skipped > 0 ? "#ff9800" : "rgba(255,255,255,0.15)" }}>{m.skipped}</div>
+                <div className={cn("w-8 sm:w-10 text-center text-[11px] sm:text-xs font-bold", sortMode === "wins" && "text-sm sm:text-base")} style={{ color: "#00e676" }}>{m.wins}</div>
+                {/* Sai = thua + bỏ */}
+                <div className="w-8 sm:w-10 text-center text-[11px] sm:text-xs font-bold" style={{ color: wrong > 0 ? "#ff5252" : "rgba(255,255,255,0.15)" }}>{wrong}</div>
                 {/* Điểm */}
                 <div className={cn("w-10 sm:w-12 text-center text-xs sm:text-sm font-black", m.isMe ? "text-[#00e676]" : "text-white")}>{m.points}</div>
               </div>
             )
           })}
+        </div>
         </div>
       )}
 
