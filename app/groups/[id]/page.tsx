@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
+import { ROUND_ORDER, canonicalRound } from "@/lib/rounds"
 import { GroupDetailView } from "./view"
 
 export default async function GroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -140,6 +141,26 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
     })),
   }
 
+  // Thua theo vòng: chỉ hiển thị từ vòng đầu tới vòng đang diễn ra của giải (không phải riêng hội)
+  const allMatchRounds = await prisma.match.findMany({ select: { stage: true, status: true, kickoffAt: true } })
+  let currentRoundIdx = 0
+  for (let i = 0; i < ROUND_ORDER.length; i++) {
+    const started = allMatchRounds.some(m => canonicalRound(m.stage) === ROUND_ORDER[i] && (m.status !== "scheduled" || m.kickoffAt <= now))
+    if (started) currentRoundIdx = i
+  }
+  const visibleRounds = ROUND_ORDER.slice(0, currentRoundIdx + 1)
+
+  const groupLossPredictions = await prisma.prediction.findMany({
+    where: { groupId: id, betType: { not: "skip" }, result: "loss" },
+    select: { match: { select: { stage: true } } },
+  })
+  const lossCountByRound: Record<string, number> = {}
+  for (const p of groupLossPredictions) {
+    const r = canonicalRound(p.match.stage)
+    lossCountByRound[r] = (lossCountByRound[r] ?? 0) + 1
+  }
+  const lossesByRound = visibleRounds.map(r => ({ round: r, losses: lossCountByRound[r] ?? 0 }))
+
   return <GroupDetailView
     group={{
       id: group.id, name: group.name, visibility: group.visibility, inviteCode: group.inviteCode,
@@ -209,6 +230,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
       activityPerDay: Math.round(activities.length / 7),
     }}
     funStats={funStats}
+    lossesByRound={lossesByRound}
     champion={members[0] ? {
       name: members[0].user.name, displayName: members[0].user.displayName ?? "",
       avatar: members[0].user.avatar ?? "??", points: members[0].points,
