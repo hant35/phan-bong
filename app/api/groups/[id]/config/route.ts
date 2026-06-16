@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
-import { sendPushToUser } from "@/lib/push"
+import { notifyUser } from "@/lib/notify"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -143,12 +143,14 @@ export async function POST(req: NextRequest, { params }: Params) {
   await Promise.allSettled(
     members
       .filter(m => m.userId !== user.id)
-      .map(m => sendPushToUser(
-        m.userId,
-        `⚙️ ${group?.name}: Kèo đã cập nhật`,
-        `${match.homeTeam} vs ${match.awayTeam} — ${pushDetails}`,
-        `/groups/${groupId}`,
-      ))
+      .map(m => notifyUser({
+        userId: m.userId,
+        type: "config",
+        title: `⚙️ ${group?.name}: Kèo đã cập nhật`,
+        body: `${match.homeTeam} vs ${match.awayTeam} — ${pushDetails}`,
+        url: `/groups/${groupId}`,
+        matchId,
+      }))
   )
 
   return NextResponse.json({ config })

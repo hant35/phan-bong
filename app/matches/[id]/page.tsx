@@ -59,10 +59,11 @@ export default async function MatchDetailPage({ params, searchParams }: MatchDet
   const visiblePredictions = blindModeActive ? [] : groupPredictions
   const myPick = m.predictions.find(p => p.userId === user.id && (!selectedGroupId || p.groupId === selectedGroupId))
 
-  const total = visiblePredictions.length || 1
-  const home = visiblePredictions.filter(p => p.side === "home" || (p.betType === "exact" && (p.homeScore ?? 0) > (p.awayScore ?? 0))).length
-  const away = visiblePredictions.filter(p => p.side === "away" || (p.betType === "exact" && (p.homeScore ?? 0) < (p.awayScore ?? 0))).length
-  const draw = visiblePredictions.length - home - away
+  const outcomePredictions = visiblePredictions.filter(p => p.betType !== "ou")
+  const total = outcomePredictions.length
+  const home = outcomePredictions.filter(p => p.side === "home" || (p.betType === "exact" && (p.homeScore ?? 0) > (p.awayScore ?? 0))).length
+  const away = outcomePredictions.filter(p => p.side === "away" || (p.betType === "exact" && (p.homeScore ?? 0) < (p.awayScore ?? 0))).length
+  const draw = outcomePredictions.filter(p => p.side === "draw" || (p.betType === "exact" && (p.homeScore ?? 0) === (p.awayScore ?? 0))).length
 
   const data = {
     id: m.id,
@@ -90,7 +91,7 @@ export default async function MatchDetailPage({ params, searchParams }: MatchDet
       homeScore: p.homeScore, awayScore: p.awayScore,
     })),
     nonPredictors: await (async () => {
-      if (!selectedGroupId) return []
+      if (!selectedGroupId || blindModeActive) return []
       const members = await prisma.groupMember.findMany({
         where: { groupId: selectedGroupId },
         include: { user: { select: { id: true, name: true, avatar: true } } },

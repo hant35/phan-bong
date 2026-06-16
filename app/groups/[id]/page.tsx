@@ -64,6 +64,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
   const allMatches = [...liveMatches, ...scheduledMatches]
   const matchIds = allMatches.map(m => m.id)
+  const now = new Date()
 
   // Prediction stats per match trong hội (để hiện tỉ lệ)
   const predStats = await prisma.prediction.groupBy({
@@ -113,17 +114,27 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
       isMe: user.id === m.userId, role: m.role,
       isAdmin: m.role === "owner" || m.role === "admin",
     }))}
-    activities={activities.map(a => ({
-      id: a.id, type: a.type, action: a.action, target: a.target,
-      user: a.user.name, avatar: a.user.avatar ?? "??", createdAt: a.createdAt.toISOString(),
-    }))}
+    activities={activities.map(a => {
+      const blindMatch = allMatches.find(m => {
+        const cfg = configMap[m.id]
+        return cfg?.blindMode && m.status === "scheduled" && m.kickoffAt > now
+          && a.target === `${m.homeTeam} vs ${m.awayTeam}`
+      })
+      return {
+        id: a.id, type: a.type,
+        action: a.type === "pick" && blindMatch ? "đã đặt kèo cho trận" : a.action,
+        target: a.target,
+        user: a.user.name, avatar: a.user.avatar ?? "??", createdAt: a.createdAt.toISOString(),
+      }
+    })}
     upcomingMatches={allMatches.map(m => {
       const cfg = configMap[m.id]
       const s = statsMap[m.id] ?? {}
-      const homeCount = (s["home"] ?? 0)
-      const awayCount = (s["away"] ?? 0)
-      const overCount = (s["over"] ?? 0)
-      const underCount = (s["under"] ?? 0)
+      const hideBlindStats = !!cfg?.blindMode && m.status === "scheduled" && m.kickoffAt > now
+      const homeCount = hideBlindStats ? 0 : (s["home"] ?? 0)
+      const awayCount = hideBlindStats ? 0 : (s["away"] ?? 0)
+      const overCount = hideBlindStats ? 0 : (s["over"] ?? 0)
+      const underCount = hideBlindStats ? 0 : (s["under"] ?? 0)
       return {
         id: m.id, homeTeam: m.homeTeam, awayTeam: m.awayTeam,
         homeFlag: m.homeFlag, awayFlag: m.awayFlag,
@@ -136,6 +147,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
         allowedBetTypes: cfg?.allowedBetTypes ?? ["ah", "ou", "exact"],
         pointsMultiplier: cfg?.pointsMultiplier ?? 1,
         blindMode: cfg?.blindMode ?? false,
+        blindModeActive: hideBlindStats,
         hasPick: m.predictions.length > 0,
         myPick: m.predictions[0] ? {
           betType: m.predictions[0].betType,

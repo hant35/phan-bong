@@ -34,7 +34,10 @@ export async function GET(req: NextRequest) {
   for (const c of groupConfigs) configMap[c.groupId] = { ahLine: c.ahLine, ouLine: c.ouLine, pointsMultiplier: c.pointsMultiplier }
 
   // Lấy tất cả group có config cho trận này + thành viên
-  const configuredGroupIds = [...new Set(predictions.map(p => p.groupId))]
+  const configuredGroupIds = [...new Set([
+    ...groupConfigs.map(c => c.groupId),
+    ...predictions.map(p => p.groupId),
+  ])]
   const groups = await prisma.group.findMany({
     where: { id: { in: configuredGroupIds } },
     include: {
@@ -84,7 +87,7 @@ export async function GET(req: NextRequest) {
     })
 
     const predCount = members.filter(m => m.prediction && m.prediction.betType !== "skip").length
-    const gradedCount = members.filter(m => m.prediction?.result != null).length
+    const gradedCount = members.filter(m => m.prediction?.betType !== "skip" && m.prediction?.result != null).length
     const winCount = members.filter(m => m.prediction?.result === "win").length
     const lossCount = members.filter(m => m.prediction?.result === "loss" && m.prediction.betType !== "skip").length
 

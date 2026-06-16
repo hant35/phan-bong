@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db"
-import { clampPoints, hopeStarDelta } from "@/lib/hope-star"
+import { checkBadgesAfterGrading } from "@/lib/badges"
+import { clampPoints, hopeStarDelta, SKIP_PENALTY } from "@/lib/hope-star"
+import { notifyOvertakenAfterGrading, snapshotGroupRanks } from "@/lib/overtaken"
 
 // ══════════════════════════════════════════════════════════════
 // Grading Engine — chấm điểm khi trận kết thúc
@@ -15,6 +17,7 @@ export interface GradingResult {
   wins: number
   losses: number
   skipped: number // thành viên hội không đoán
+  newlyGraded: number // số prediction mới chấm lần này (0 = đã chấm trước đó)
   details: { userId: string; name: string; betType: string; result: "win" | "loss"; reason: string }[]
   skippedUsers: { userId: string; name: string; groupName: string }[]
 }
@@ -127,6 +130,21 @@ async function applyHopeStarPoints(
   }
 }
 
+function normalizedMultiplier(multiplier: number | undefined): number {
+  return Math.max(1, Math.round(multiplier ?? 1))
+}
+
+function applyPointsMultiplier(delta: number, multiplier: number): number {
+  return delta * multiplier
+}
+
+function withMultiplierReason(reason: string, baseDelta: number, multiplier: number, pointsDelta: number): string {
+  if (multiplier <= 1) return reason
+  const base = baseDelta > 0 ? `+${baseDelta}` : `${baseDelta}`
+  const final = pointsDelta > 0 ? `+${pointsDelta}` : `${pointsDelta}`
+  return `${reason} · Hệ số ×${multiplier}: ${base} → ${final} xu`
+}
+
 // ── Preview grading (for live matches — temporary) ──
 
 export async function previewGrading(matchId: string): Promise<GradingResult | null> {
@@ -162,7 +180,10 @@ export async function previewGrading(matchId: string): Promise<GradingResult | n
         ouLine: cfg.ouLine ?? match.ouLine,
       },
     )
-    details.push({ userId: pred.userId, name: pred.user.name, betType: pred.betType, result, reason })
+    const multiplier = normalizedMultiplier(cfg.pointsMultiplier)
+    const baseDelta = hopeStarDelta(pred.confidence, result)
+    const pointsDelta = applyPointsMultiplier(baseDelta, multiplier)
+    details.push({ userId: pred.userId, name: pred.user.name, betType: pred.betType, result, reason: withMultiplierReason(reason, baseDelta, multiplier, pointsDelta) })
     if (result === "win") wins++
     else losses++
   }
@@ -177,6 +198,7 @@ export async function previewGrading(matchId: string): Promise<GradingResult | n
     wins,
     losses,
     skipped: 0,
+    newlyGraded: 0,
     details,
     skippedUsers: [],
   }
@@ -201,8 +223,16 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
     include: { user: { select: { id: true, name: true } } },
   })
 
+  const affectedGroupIds = [...new Set([
+    ...groupConfigs.map(c => c.groupId),
+    ...predictions.map(p => p.groupId),
+  ])]
+  const rankBefore = await snapshotGroupRanks(affectedGroupIds)
+
   const details: GradingResult["details"] = []
-  let wins = 0, losses = 0
+  let wins = 0, losses = 0, newlyGraded = 0
+  let rankingsMayHaveChanged = false
+  const newlyGradedUserIds: string[] = []
 
   // 1. Grade each prediction — bỏ qua prediction đã có result (idempotent)
   for (const pred of predictions) {
@@ -225,7 +255,9 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
       },
     )
 
-    const pointsDelta = hopeStarDelta(pred.confidence, result)
+    const multiplier = normalizedMultiplier(cfg.pointsMultiplier)
+    const baseDelta = hopeStarDelta(pred.confidence, result)
+    const pointsDelta = applyPointsMultiplier(baseDelta, multiplier)
 
     await prisma.prediction.update({
       where: { id: pred.id },
@@ -236,8 +268,15 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
 
     if (result === "win") wins++
     else losses++
+    newlyGraded++
+    rankingsMayHaveChanged = true
+    newlyGradedUserIds.push(pred.userId)
 
-    details.push({ userId: pred.userId, name: pred.user.name, betType: pred.betType, result, reason })
+    details.push({ userId: pred.userId, name: pred.user.name, betType: pred.betType, result, reason: withMultiplierReason(reason, baseDelta, multiplier, pointsDelta) })
+  }
+
+  if (newlyGradedUserIds.length > 0) {
+    await checkBadgesAfterGrading(newlyGradedUserIds).catch(() => {})
   }
 
   // 2. Tìm thành viên chưa đoán theo từng hội (per-group skip)
@@ -278,13 +317,21 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
               side: null,
               confidence: 0,
               result: "loss",
-              points: 0,
+              points: -SKIP_PENALTY,
             },
+          })
+          const memberRow = await prisma.groupMember.findUnique({
+            where: { userId_groupId: { userId: member.userId, groupId: group.id } },
+            select: { points: true },
           })
           await prisma.groupMember.updateMany({
             where: { userId: member.userId, groupId: group.id },
-            data: { skipped: { increment: 1 } },
+            data: {
+              skipped: { increment: 1 },
+              points: memberRow ? clampPoints(memberRow.points, -SKIP_PENALTY) : 0,
+            },
           })
+          rankingsMayHaveChanged = true
         }
       }
     }
@@ -302,6 +349,10 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
     }
   }
 
+  if (rankingsMayHaveChanged) {
+    await notifyOvertakenAfterGrading(affectedGroupIds, rankBefore).catch(() => {})
+  }
+
   return {
     matchId,
     homeTeam: match.homeTeam,
@@ -312,6 +363,7 @@ export async function gradeMatch(matchId: string): Promise<GradingResult | null>
     wins,
     losses,
     skipped: skippedUsers.length,
+    newlyGraded,
     details,
     skippedUsers,
   }

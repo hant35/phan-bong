@@ -197,33 +197,6 @@ export function MatchDetailView({ match, currentUserId, isInGroup, userGroups }:
             <p className="text-sm text-white/30 text-center py-4">Chưa có ai đoán trận này</p>
           )}
 
-          {match.h2h && match.h2h.home !== null && (
-            <div className="rounded-xl p-3 mb-1" style={{ background: "rgba(255,255,255,0.03)" }}>
-              <div className="text-[10px] text-white/30 uppercase tracking-widest text-center mb-2">Lịch sử đối đầu</div>
-              <div className="flex items-center justify-center gap-3 mb-2">
-                <div className="text-center">
-                  <div className="text-xl font-black" style={{ color: match.homeColor ?? "#00e676" }}>{match.h2h.home}</div>
-                  <div className="text-[10px] text-white/30 truncate max-w-16">{match.homeTeam}</div>
-                </div>
-                <div className="text-center px-2">
-                  <div className="text-xl font-black text-white/40">{match.h2h.draw}</div>
-                  <div className="text-[10px] text-white/30">Hòa</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl font-black" style={{ color: match.awayColor ?? "#00bcd4" }}>{match.h2h.away}</div>
-                  <div className="text-[10px] text-white/30 truncate max-w-16">{match.awayTeam}</div>
-                </div>
-              </div>
-              <div className="flex justify-center gap-1.5">
-                {match.h2h.recent.map((r, i) => (
-                  <span key={i} className="text-[10px] font-mono px-1.5 py-0.5 rounded font-bold"
-                    style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)" }}>
-                    {r}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Predictors */}

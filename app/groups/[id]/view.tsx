@@ -7,9 +7,9 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, Users, Lock, Globe, Crown, Copy, Check, TrendingUp, TrendingDown, Minus, Flame, Activity, Newspaper, Sparkles, Bell, Send, X, CheckCircle2, AlertCircle, Zap, Loader2, Settings, Shield } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagUrl, formatDateTimeParts, timeAgo } from "@/lib/format"
-import { GroupChat } from "@/components/group-chat"
 import { HopeStarPicker } from "@/components/hope-star-picker"
 import { DEFAULT_HOPE_STAR } from "@/lib/hope-star"
+import { GROUPS_LIST_HREF } from "@/lib/groups-nav"
 
 const avatarGradients = [
   "linear-gradient(135deg, #ffd700, #ff8f00)",
@@ -39,7 +39,7 @@ interface Activity { id: string; type: string; action: string; target: string; u
 interface UpcomingMatch {
   id: string; homeTeam: string; awayTeam: string; homeFlag: string; awayFlag: string
   kickoffAt: string; ahLine: number | null; ouLine: number | null; allowedBetTypes: string[]
-  pointsMultiplier: number; blindMode: boolean; hasPick: boolean
+  pointsMultiplier: number; blindMode: boolean; blindModeActive: boolean; hasPick: boolean
   isLive: boolean; scoreHome: number | null; scoreAway: number | null; minute: number | null
   hasConfig: boolean
   predStats: { homeCount: number; awayCount: number; overCount: number; underCount: number }
@@ -157,7 +157,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
 
   return (
     <div>
-      <Link href="/groups" className="inline-flex items-center gap-1.5 text-sm text-white/30 hover:text-white/60 transition-colors mb-4">
+      <Link href={GROUPS_LIST_HREF} className="inline-flex items-center gap-1.5 text-sm text-white/30 hover:text-white/60 transition-colors mb-4">
         <ArrowLeft size={15} /> Hội của tôi
       </Link>
 
@@ -399,7 +399,12 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                       )}
 
                       {/* Tỉ lệ dự đoán */}
-                      {(ahTotal > 0 || ouTotal > 0) && (
+                      {match.blindModeActive ? (
+                        <div className="rounded-lg px-2.5 py-1.5 text-[10px] text-center"
+                          style={{ background: "rgba(124,58,237,0.08)", color: "#a78bfa", border: "1px solid rgba(124,58,237,0.16)" }}>
+                          Blind mode đang bật — tỉ lệ sẽ mở sau kickoff
+                        </div>
+                      ) : (ahTotal > 0 || ouTotal > 0) && (
                         <div className="space-y-1 md:space-y-0.5">
                           {ahTotal > 0 && (
                             <div>
@@ -587,8 +592,6 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
             </div>
           </div>
 
-          {/* Chat hội */}
-          <GroupChat groupId={group.id} currentUserId={currentUserId} />
         </div>
       )}
 

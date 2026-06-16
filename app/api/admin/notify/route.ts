@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
-import { sendPushToUser, sendPushToAll } from "@/lib/push"
+import { notifyAll, notifyUser } from "@/lib/notify"
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser()
@@ -19,7 +19,12 @@ export async function POST(req: NextRequest) {
   // Super admin gửi cho tất cả
   if (target === "all") {
     if (user.role !== "admin") return NextResponse.json({ error: "Không có quyền" }, { status: 403 })
-    const result = await sendPushToAll(title.trim(), body.trim(), url || "/")
+    const result = await notifyAll({
+      type: "admin",
+      title: title.trim(),
+      body: body.trim(),
+      url: url || "/",
+    })
     if (!result.configured) {
       return NextResponse.json({ error: `Chưa cấu hình VAPID keys trên server. ${result.debug ?? ""}`, ...result }, { status: 503 })
     }
@@ -53,7 +58,13 @@ export async function POST(req: NextRequest) {
     })
 
     const results = await Promise.all(
-      members.map(m => sendPushToUser(m.userId, title.trim(), body.trim(), url || `/groups/${groupId}`)),
+      members.map(m => notifyUser({
+        userId: m.userId,
+        type: "admin",
+        title: title.trim(),
+        body: body.trim(),
+        url: url || `/groups/${groupId}`,
+      })),
     )
     const aggregated = results.reduce(
       (acc, r) => ({

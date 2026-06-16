@@ -1,22 +1,41 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 
-// Chạy cron job mỗi 60 giây để tự động chuyển trạng thái trận đấu
-// Component này mount 1 lần ở layout, không render gì
+// ══════════════════════════════════════════════════════════════
+// CronRunner — refresh nhẹ UI khi người dùng quay lại tab/app.
+// Sync/chấm điểm chạy bằng server cron để không lộ endpoint tốn quota.
+// ══════════════════════════════════════════════════════════════
 
 export function CronRunner() {
+  const router = useRouter()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
-    // Chạy ngay khi mount
-    fetch("/api/cron").catch(() => {})
+    let mounted = true
 
-    // Lặp lại mỗi 60 giây
-    const interval = setInterval(() => {
-      fetch("/api/cron").catch(() => {})
-    }, 60_000)
+    function refreshIfVisible() {
+      if (!mounted) return
+      if (document.visibilityState === "visible") router.refresh()
+    }
 
-    return () => clearInterval(interval)
-  }, [])
+    function schedule() {
+      timerRef.current = setTimeout(() => {
+        refreshIfVisible()
+        schedule()
+      }, 60_000)
+    }
+
+    document.addEventListener("visibilitychange", refreshIfVisible)
+    schedule()
+
+    return () => {
+      mounted = false
+      document.removeEventListener("visibilitychange", refreshIfVisible)
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [router])
 
   return null
 }

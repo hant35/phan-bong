@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db"
+import { gradeMatch } from "@/lib/grading"
+import { notifyMatchResults } from "@/lib/result-notify"
 
 // ══════════════════════════════════════════════════════════════
 // Data source definitions
@@ -69,6 +71,34 @@ export interface SyncResult {
 // ══════════════════════════════════════════════════════════════
 // Matching helper — find local match by team names + date
 // ══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+// Helper: auto-grade + push notification khi trận kết thúc
+// ══════════════════════════════════════════════════════════════
+
+async function gradeAndNotify(
+  matchId: string,
+  homeTeam: string,
+  awayTeam: string,
+  scoreHome: number | null,
+  scoreAway: number | null,
+  result: SyncResult,
+) {
+  try {
+    const gr = await gradeMatch(matchId)
+    if (gr) {
+      result.details.push(`🏆 Đã chấm điểm ${homeTeam} vs ${awayTeam}: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
+
+      // Chỉ gửi push lần đầu tiên chấm điểm — tránh duplicate khi cron + sync chạy cùng lúc
+      if (gr.newlyGraded > 0 && scoreHome != null && scoreAway != null) {
+        const n = await notifyMatchResults(matchId, homeTeam, awayTeam, scoreHome, scoreAway).catch(() => 0)
+        result.details.push(`📲 Đã gửi thông báo cho ${n} người dự đoán`)
+      }
+    }
+  } catch (e) {
+    result.errors.push(`Lỗi chấm điểm ${homeTeam} vs ${awayTeam}: ${e instanceof Error ? e.message : String(e)}`)
+  }
+}
 
 function normalizeTeam(name: string): string {
   // Map common English → Vietnamese team names
@@ -368,6 +398,16 @@ export async function syncFootballData(apiKey: string): Promise<SyncResult> {
         await prisma.match.update({ where: { id: local.id }, data: updates })
         result.updated++
         result.details.push(`${local.homeTeam} vs ${local.awayTeam}: ${Object.keys(updates).join(", ")}`)
+
+        // Auto-grade + push notification khi trận chuyển sang finished
+        if (updates.status === "finished" && local.status !== "finished") {
+          await gradeAndNotify(
+            local.id, local.homeTeam, local.awayTeam,
+            (updates.scoreHome as number | null) ?? local.scoreHome,
+            (updates.scoreAway as number | null) ?? local.scoreAway,
+            result,
+          )
+        }
       }
     }
   } catch (e: unknown) {
@@ -397,7 +437,9 @@ export async function syncOpenFootball(): Promise<SyncResult> {
     }
     const data = await res.json()
     const localMatches = await prisma.match.findMany()
-    const allExtMatches = (data.rounds || []).flatMap((round: { matches?: unknown[] }) => round.matches || [])
+    const allExtMatches = Array.isArray(data.matches)
+      ? data.matches
+      : (data.rounds || []).flatMap((round: { matches?: unknown[] }) => round.matches || [])
 
     result.response = {
       status: res.status, statusText: res.statusText,
@@ -463,6 +505,16 @@ export async function syncOpenFootball(): Promise<SyncResult> {
         await prisma.match.update({ where: { id: local.id }, data: updates })
         result.updated++
         result.details.push(`${local.homeTeam} vs ${local.awayTeam}: ${Object.keys(updates).join(", ")}`)
+
+        // Auto-grade + push notification khi trận chuyển sang finished
+        if (updates.status === "finished" && local.status !== "finished") {
+          await gradeAndNotify(
+            local.id, local.homeTeam, local.awayTeam,
+            (updates.scoreHome as number | null) ?? local.scoreHome,
+            (updates.scoreAway as number | null) ?? local.scoreAway,
+            result,
+          )
+        }
       }
     }
   } catch (e: unknown) {
@@ -570,6 +622,16 @@ export async function syncApiFootball(apiKey: string): Promise<SyncResult> {
         await prisma.match.update({ where: { id: local.id }, data: updates })
         result.updated++
         result.details.push(`${local.homeTeam} vs ${local.awayTeam}: ${Object.keys(updates).join(", ")}`)
+
+        // Auto-grade + push notification khi trận chuyển sang finished
+        if (updates.status === "finished" && local.status !== "finished") {
+          await gradeAndNotify(
+            local.id, local.homeTeam, local.awayTeam,
+            (updates.scoreHome as number | null) ?? local.scoreHome,
+            (updates.scoreAway as number | null) ?? local.scoreAway,
+            result,
+          )
+        }
       }
     }
 

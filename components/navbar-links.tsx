@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 
 const iconMap = { Calendar, Trophy, Users, Home, History, User, Shield }
 
-interface NavItem { href: string; label: string; icon: keyof typeof iconMap; exact?: boolean }
+interface NavItem { href: string; label: string; icon: keyof typeof iconMap; exact?: boolean; matchPrefix?: string }
 
 export function NavbarLinks({
   items, mobile = false, badges = {},
@@ -20,9 +20,11 @@ export function NavbarLinks({
     return (
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/5 flex pb-safe"
         style={{ background: "rgba(15,17,23,0.95)", backdropFilter: "blur(20px)" }}>
-        {items.map(({ href, label, icon, exact }) => {
+        {items.map(({ href, label, icon, exact, matchPrefix }) => {
           const Icon = iconMap[icon]
-          const active = exact ? pathname === href : pathname.startsWith(href)
+          const active = matchPrefix
+            ? pathname === matchPrefix || pathname.startsWith(`${matchPrefix}/`)
+            : exact ? pathname === href : pathname.startsWith(href)
           const badge = badges[href]
           return (
             <Link key={href} href={href}
@@ -49,9 +51,11 @@ export function NavbarLinks({
 
   return (
     <nav className="hidden md:flex items-center gap-1">
-      {items.map(({ href, label, icon, exact }) => {
+      {items.map(({ href, label, icon, exact, matchPrefix }) => {
         const Icon = iconMap[icon]
-        const active = exact ? pathname === href : pathname.startsWith(href)
+        const active = matchPrefix
+          ? pathname === matchPrefix || pathname.startsWith(`${matchPrefix}/`)
+          : exact ? pathname === href : pathname.startsWith(href)
         const badge = badges[href]
         return (
           <Link key={href} href={href}

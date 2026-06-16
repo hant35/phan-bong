@@ -1,5 +1,5 @@
 {
-  "buildCommand": "prisma generate && next build",
+  "buildCommand": "[ -z \"$DATABASE_URL\" ] || prisma migrate deploy && prisma generate && next build",
   "crons": [
     {
       "path": "/api/cron",

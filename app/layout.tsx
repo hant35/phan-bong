@@ -8,6 +8,7 @@ import { NavigationProgress } from "@/components/navigation-progress"
 import { Onboarding } from "@/components/onboarding"
 import { PushNotificationPrompt } from "@/components/push-prompt"
 import { ToastProvider } from "@/components/toast"
+import { PullToRefresh } from "@/components/pull-to-refresh"
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -42,6 +43,7 @@ export default function RootLayout({
             <NavigationProgress />
           </Suspense>
           <PwaInit />
+          <PullToRefresh />
           <Onboarding />
           <PushNotificationPrompt />
           <Navbar />

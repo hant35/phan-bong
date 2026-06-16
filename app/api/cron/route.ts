@@ -1,31 +1,57 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { sendPushToUser } from "@/lib/push"
+import { notifyUser } from "@/lib/notify"
+import { gradeMatch } from "@/lib/grading"
+import { sendKickoffReminders } from "@/lib/kickoff-reminders"
+import { notifyMatchResults } from "@/lib/result-notify"
+import { syncFootballData } from "@/lib/sync-sources"
+import { requireCronOrAdmin } from "@/lib/request-auth"
 
 // ══════════════════════════════════════════════════════════════
-// Cron Job — chạy mỗi 1 phút, tự động chuyển trạng thái trận đấu
-// GET /api/cron — có thể gọi từ client setInterval hoặc external cron
+// Cron Job — tự động chuyển trạng thái trận đấu
+// GET /api/cron — chỉ cho Vercel/external cron có secret hoặc admin
 // ══════════════════════════════════════════════════════════════
 
 export async function GET(req: NextRequest) {
-  // Optional: verify cron secret for external callers
-  const secret = req.nextUrl.searchParams.get("secret")
-  const expectedSecret = process.env.CRON_SECRET
-
-  // If CRON_SECRET is set, validate it (for production security)
-  if (expectedSecret && secret !== expectedSecret) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const allowed = await requireCronOrAdmin(req)
+  if (!allowed) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const now = new Date()
   const results: string[] = []
 
-  // ── 1. scheduled → live: trận đã đến giờ kickoff (trong vòng 4 giờ gần nhất) ──
-  const fourHoursAgo = new Date(now.getTime() - 4 * 60 * 60 * 1000)
+  // ── 0a. Nhắc trước kickoff (T-30p, T-5p) ──
+  try {
+    const reminderLog = await sendKickoffReminders(now)
+    results.push(...reminderLog)
+  } catch (e) {
+    results.push(`❌ Kickoff reminders failed: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
+  // ── 0. Đồng bộ từ Football-Data.org (API uy tín nhất) ──
+  const fdKey = process.env.FOOTBALL_DATA_API_KEY
+  if (fdKey) {
+    try {
+      const syncResult = await syncFootballData(fdKey)
+      if (syncResult.updated > 0) {
+        results.push(`🔄 Sync Football-Data: ${syncResult.updated} cập nhật`)
+      }
+      if (syncResult.errors.length > 0) {
+        results.push(`⚠️ Sync errors: ${syncResult.errors.join(", ")}`)
+      }
+      for (const d of syncResult.details) {
+        if (d.startsWith("🏆") || d.startsWith("📲")) results.push(d)
+      }
+    } catch (e) {
+      results.push(`❌ Sync failed: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  // ── 1. scheduled → live: trận đã đến giờ kickoff (trong vòng 48 giờ gần nhất) ──
+  const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000)
   const shouldStart = await prisma.match.findMany({
     where: {
       status: "scheduled",
-      kickoffAt: { lte: now, gte: fourHoursAgo },
+      kickoffAt: { lte: now, gte: fortyEightHoursAgo },
     },
   })
 
@@ -49,19 +75,54 @@ export async function GET(req: NextRequest) {
         select: { userId: true },
       })
       for (const p of predictors) {
-        await sendPushToUser(
-          p.userId,
-          `⚽ Trận đấu bắt đầu!`,
-          `${match.homeTeam} vs ${match.awayTeam} vừa bắt đầu`,
-          `/matches/${match.id}`,
-        ).catch(() => {})
+        await notifyUser({
+          userId: p.userId,
+          type: "kickoff",
+          title: "⚽ Trận đấu bắt đầu!",
+          body: `${match.homeTeam} vs ${match.awayTeam} vừa bắt đầu`,
+          url: `/matches/${match.id}`,
+          matchId: match.id,
+        }).catch(() => {})
       }
     } else {
       results.push(`⚠️ ${match.homeTeam} vs ${match.awayTeam} — thiếu kèo, không thể bắt đầu`)
     }
   }
 
-  // ── 2. live quá 120 phút → tự kết thúc (safety net) ──
+  // ── 2. scheduled/live đã có tỉ số, qua giờ đá > 105 phút → tự kết thúc ──
+  const shouldFinish = await prisma.match.findMany({
+    where: {
+      status: { in: ["scheduled", "live"] },
+      scoreHome: { not: null },
+      scoreAway: { not: null },
+      kickoffAt: { lte: new Date(now.getTime() - 105 * 60 * 1000) },
+    },
+  })
+
+  for (const match of shouldFinish) {
+    await prisma.match.update({
+      where: { id: match.id },
+      data: { status: "finished" },
+    })
+    results.push(`🏁 ${match.homeTeam} vs ${match.awayTeam} → FINISHED (${match.scoreHome}-${match.scoreAway})`)
+
+    try {
+      const gr = await gradeMatch(match.id)
+      if (gr) {
+        results.push(`🏆 Chấm điểm: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
+        if (gr.newlyGraded > 0 && match.scoreHome != null && match.scoreAway != null) {
+          const n = await notifyMatchResults(
+            match.id, match.homeTeam, match.awayTeam, match.scoreHome, match.scoreAway,
+          ).catch(() => 0)
+          results.push(`📲 Thông báo cho ${n} người`)
+        }
+      }
+    } catch (e) {
+      results.push(`❌ Lỗi chấm điểm: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  // ── 3. live quá 120 phút → tự kết thúc (safety net) ──
   const staleLive = await prisma.match.findMany({
     where: {
       status: "live",
@@ -70,13 +131,32 @@ export async function GET(req: NextRequest) {
   })
 
   for (const match of staleLive) {
-    // Chỉ auto-finish nếu đã có tỉ số
+    // Auto-finish nếu đã có tỉ số và live > 120p
     if (match.scoreHome != null && match.scoreAway != null) {
-      results.push(`⏰ ${match.homeTeam} vs ${match.awayTeam} — live > 120p, cần admin kết thúc thủ công`)
+      await prisma.match.update({
+        where: { id: match.id },
+        data: { status: "finished" },
+      })
+      results.push(`⏰ ${match.homeTeam} vs ${match.awayTeam} → FINISHED (auto, live > 120p)`)
+
+      try {
+        const gr = await gradeMatch(match.id)
+        if (gr) {
+          results.push(`🏆 Chấm điểm: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
+          if (gr.newlyGraded > 0 && match.scoreHome != null && match.scoreAway != null) {
+            const n = await notifyMatchResults(
+              match.id, match.homeTeam, match.awayTeam, match.scoreHome, match.scoreAway,
+            ).catch(() => 0)
+            results.push(`📲 Thông báo cho ${n} người`)
+          }
+        }
+      } catch (e) {
+        results.push(`❌ Lỗi chấm điểm: ${e instanceof Error ? e.message : String(e)}`)
+      }
     }
   }
 
-  // ── 3. Tự tăng minute cho trận live ──
+  // ── 4. Tự tăng minute cho trận live ──
   const liveMatches = await prisma.match.findMany({
     where: { status: "live" },
   })
@@ -96,6 +176,7 @@ export async function GET(req: NextRequest) {
     ok: true,
     timestamp: now.toISOString(),
     started: shouldStart.length,
+    finished: shouldFinish.length,
     liveUpdated: liveMatches.length,
     staleWarnings: staleLive.length,
     log: results,

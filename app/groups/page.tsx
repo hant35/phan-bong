@@ -1,11 +1,23 @@
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
+import { getDefaultGroupId } from "@/lib/default-group"
 import { GroupsView } from "./view"
 
-export default async function GroupsPage() {
+type GroupsPageProps = {
+  searchParams?: Promise<{ list?: string }>
+}
+
+export default async function GroupsPage({ searchParams }: GroupsPageProps) {
   const user = await getCurrentUser()
   if (!user) redirect("/login")
+
+  const query = searchParams ? await searchParams : {}
+  const showList = query.list === "1" || query.list === "true"
+  if (!showList) {
+    const defaultGroupId = await getDefaultGroupId(user.id)
+    if (defaultGroupId) redirect(`/groups/${defaultGroupId}`)
+  }
 
   const memberships = await prisma.groupMember.findMany({
     where: { userId: user.id },

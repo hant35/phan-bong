@@ -10,13 +10,16 @@ interface Notification {
 
 const TYPE_EMOJI: Record<string, string> = {
   kickoff_soon: "⏰",
+  kickoff: "⚽",
   goal: "⚽",
   result: "📊",
   streak: "🔥",
   overtaken: "📈",
   badge: "🏅",
-  comment: "💬",
   prediction: "🎯",
+  join: "👋",
+  config: "⚙️",
+  admin: "📢",
   welcome: "👋",
 }
 

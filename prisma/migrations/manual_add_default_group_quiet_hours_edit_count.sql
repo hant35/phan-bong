@@ -1,0 +1,15 @@
+DROP INDEX IF EXISTS "GroupChat_groupId_createdAt_idx";
+
+ALTER TABLE "Prediction" ADD COLUMN IF NOT EXISTS "editCount" INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE "Prediction" ALTER COLUMN "confidence" SET DEFAULT 1;
+
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "defaultGroupId" TEXT;
+
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "quietHoursEnabled" BOOLEAN NOT NULL DEFAULT true;
+
+ALTER TABLE "GroupMatchConfig" ALTER COLUMN "updatedAt" DROP DEFAULT;
+
+ALTER TABLE "GroupMatchConfig" ALTER COLUMN "updatedBy" DROP DEFAULT;
+
+ALTER TABLE "GroupMatchConfig" ADD CONSTRAINT "GroupMatchConfig_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

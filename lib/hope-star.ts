@@ -4,11 +4,14 @@
 
 export const DEFAULT_HOPE_STAR = 1
 
+/** Xu bị trừ khi bỏ trận không dự đoán */
+export const SKIP_PENALTY = 5
+
 /** index 1..5 → xu thưởng khi thắng */
 export const HOPE_STAR_WIN = [0, 1, 2, 3, 4, 5] as const
 
 /** index 1..5 → xu trừ khi thua (0 = không trừ) */
-export const HOPE_STAR_LOSS = [0, 0, 1, 2, 4, 4] as const
+export const HOPE_STAR_LOSS = [0, 0, 1, 2, 3, 4] as const
 
 export type HopeStar = 1 | 2 | 3 | 4 | 5
 
