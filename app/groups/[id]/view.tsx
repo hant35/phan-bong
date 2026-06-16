@@ -46,10 +46,11 @@ interface UpcomingMatch {
   myPick: { betType: string; side: string | null; homeScore: number | null; awayScore: number | null; confidence: number } | null
 }
 
-export function GroupDetailView({ group, currentUserId, myRole, members, activities, upcomingMatches, stats, champion }: {
+export function GroupDetailView({ group, currentUserId, myRole, members, activities, upcomingMatches, stats, champion, lossesByRound }: {
   group: Group; currentUserId: string; myRole: string; members: Member[]; activities: Activity[]; upcomingMatches: UpcomingMatch[];
   stats: { totalPicks: number; winRate: number; activityPerDay: number };
   champion: { name: string; displayName: string; avatar: string; points: number; correct: number; total: number; streak: number } | null;
+  lossesByRound: { round: string; losses: number }[];
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<"overview" | "leaderboard" | "activity" | "matches" | "members">("overview")
@@ -279,6 +280,24 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
               </div>
             ))}
           </div>
+
+          {/* Thua theo vòng */}
+          {lossesByRound.length > 0 && (
+            <div className="rounded-3xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center gap-1.5 px-4 pt-4 pb-2">
+                <TrendingDown size={13} style={{ color: "#ff5252" }} />
+                <h3 className="font-bold text-white text-xs md:text-sm">Thua theo vòng</h3>
+              </div>
+              <div className="px-4 pb-4 space-y-2">
+                {lossesByRound.map(r => (
+                  <div key={r.round} className="flex items-center justify-between">
+                    <span className="text-xs text-white/50">{r.round}</span>
+                    <span className="text-xs font-black" style={{ color: "#ff5252" }}>{r.losses} trận thua</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Trận đang diễn ra + sắp tới */}
           {upcomingMatches.length === 0 ? (
