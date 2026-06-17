@@ -3,7 +3,8 @@ import { prisma } from "@/lib/db"
 import { requireAdmin } from "@/lib/admin"
 import { gradeMatch } from "@/lib/grading"
 
-const MATCH_DURATION_MS = 105 * 60 * 1000
+// 90p thi đấu + 15p bù giờ + 10p buffer chờ API free update tỉ số cuối
+const MATCH_DURATION_MS = 115 * 60 * 1000
 
 function gradingMatchWhere(now = new Date()) {
   return {
