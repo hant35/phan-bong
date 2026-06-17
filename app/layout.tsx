@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Suspense } from "react"
 import "./globals.css"
 import { Navbar } from "@/components/navbar"
+import { BottomNav } from "@/components/bottom-nav"
 import { CronRunner } from "@/components/cron-runner"
 import { PwaInit } from "@/components/pwa-init"
 import { NavigationProgress } from "@/components/navigation-progress"
@@ -39,18 +40,27 @@ export default function RootLayout({
     <html lang="vi">
       <body>
         <ToastProvider>
-          <Suspense fallback={null}>
-            <NavigationProgress />
-          </Suspense>
+          {/* Fixed/absolute overlays — outside flex shell */}
+          <Suspense fallback={null}><NavigationProgress /></Suspense>
           <PwaInit />
           <PullToRefresh />
           <Onboarding />
           <PushNotificationPrompt />
-          <Navbar />
           <CronRunner />
-          <main className="max-w-5xl mx-auto px-4 py-6 pb-28 md:pb-8">
-            {children}
-          </main>
+
+          {/* App shell: flex column chiếm toàn bộ màn hình
+              → header + main + bottom-nav không bao giờ shift trên iOS */}
+          <div className="flex flex-col" style={{ height: "100dvh", overflow: "hidden" }}>
+            <Navbar />
+            <main id="main-scroll"
+              className="flex-1 overflow-y-auto"
+              style={{ WebkitOverflowScrolling: "touch" }}>
+              <div className="max-w-5xl mx-auto px-4 py-6 pb-6 md:pb-8">
+                {children}
+              </div>
+            </main>
+            <BottomNav />
+          </div>
         </ToastProvider>
       </body>
     </html>
