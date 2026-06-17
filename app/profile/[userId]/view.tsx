@@ -15,7 +15,7 @@ interface Props {
   }
   badges: { code: string; name: string; emoji: string; description: string; earned: boolean }[]
   statsByType: { type: string; correct: number; total: number; color: string }[]
-  recentPicks: { id: string; match: string; homeFlag: string; awayFlag: string; pickLabel: string; confidence: number; result: string; points: number; actualScore: string | null }[]
+  recentPicks: { id: string; match: string; homeFlag: string; awayFlag: string; pickLabel: string; confidence: number; result: string; points: number; actualScore: string | null; groupName: string }[]
 }
 
 const avatarGradients = [
@@ -137,7 +137,7 @@ export function PublicProfileView({ user, badges, statsByType, recentPicks }: Pr
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold text-white truncate">{p.match}</div>
-                <div className="text-[10px] text-white/40">{p.pickLabel}</div>
+                <div className="text-[10px] text-white/40">{p.pickLabel} · {p.groupName}</div>
               </div>
               <div className={cn("text-xs font-black px-2 py-0.5 rounded-lg",
                 p.result === "win" ? "text-[#00e676]" : p.result === "loss" ? "text-[#ff5252]" : "text-white/30"

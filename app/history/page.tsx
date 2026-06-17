@@ -9,7 +9,7 @@ export default async function HistoryPage() {
 
   const picks = await prisma.prediction.findMany({
     where: { userId: user.id },
-    include: { match: true },
+    include: { match: true, group: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
   })
 
@@ -26,6 +26,7 @@ export default async function HistoryPage() {
     result: p.result ?? (p.match.status === "live" ? "live" : "pending"),
     points: p.points,
     actualScore: p.match.scoreHome !== null ? `${p.match.scoreHome}-${p.match.scoreAway}` : null,
+    groupName: p.group.name,
   }))
 
   return <HistoryView picks={data} />
