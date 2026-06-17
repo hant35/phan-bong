@@ -186,7 +186,7 @@ export async function PATCH(req: NextRequest) {
   // 2. Reset tất cả predictions của trận này
   await prisma.prediction.updateMany({
     where: { matchId },
-    data: { result: null, points: 0, gradedAt: null },
+    data: { result: null, points: 0 },
   })
 
   // 3. Với mỗi user-group bị ảnh hưởng: replay tất cả prediction ĐÃ CHẤM KHÁC
@@ -198,7 +198,7 @@ export async function PATCH(req: NextRequest) {
         matchId: { not: matchId },
         result: { not: null },
       },
-      orderBy: [{ gradedAt: "asc" }, { createdAt: "asc" }],
+      orderBy: { createdAt: "asc" },
       select: { points: true, result: true, betType: true },
     })
 
