@@ -89,13 +89,14 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // ── 2. scheduled/live đã có tỉ số, qua giờ đá > 105 phút → tự kết thúc ──
+  // ── 2. scheduled/live đã có tỉ số, qua giờ đá > 115 phút → tự kết thúc ──
+  // 90p thi đấu + 15p bù giờ + 10p buffer chờ API free update tỉ số cuối
   const shouldFinish = await prisma.match.findMany({
     where: {
       status: { in: ["scheduled", "live"] },
       scoreHome: { not: null },
       scoreAway: { not: null },
-      kickoffAt: { lte: new Date(now.getTime() - 105 * 60 * 1000) },
+      kickoffAt: { lte: new Date(now.getTime() - 115 * 60 * 1000) },
     },
   })
 
@@ -122,22 +123,22 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // ── 3. live quá 120 phút → tự kết thúc (safety net) ──
+  // ── 3. live quá 130 phút → tự kết thúc (safety net) ──
   const staleLive = await prisma.match.findMany({
     where: {
       status: "live",
-      kickoffAt: { lte: new Date(now.getTime() - 120 * 60 * 1000) }, // > 120 phút
+      kickoffAt: { lte: new Date(now.getTime() - 130 * 60 * 1000) }, // > 130 phút
     },
   })
 
   for (const match of staleLive) {
-    // Auto-finish nếu đã có tỉ số và live > 120p
+    // Auto-finish nếu đã có tỉ số và live > 130p
     if (match.scoreHome != null && match.scoreAway != null) {
       await prisma.match.update({
         where: { id: match.id },
         data: { status: "finished" },
       })
-      results.push(`⏰ ${match.homeTeam} vs ${match.awayTeam} → FINISHED (auto, live > 120p)`)
+      results.push(`⏰ ${match.homeTeam} vs ${match.awayTeam} → FINISHED (auto, live > 130p)`)
 
       try {
         const gr = await gradeMatch(match.id)

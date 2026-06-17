@@ -3,7 +3,8 @@ import { prisma } from "@/lib/db"
 import { requireAdmin } from "@/lib/admin"
 import { gradeMatch } from "@/lib/grading"
 
-const MATCH_DURATION_MS = 105 * 60 * 1000
+// 90p thi đấu + 15p bù giờ + 10p buffer chờ API free update tỉ số cuối
+const MATCH_DURATION_MS = 115 * 60 * 1000
 
 function gradingMatchWhere(now = new Date()) {
   return {
@@ -151,3 +152,84 @@ export async function POST(req: NextRequest) {
     results,
   })
 }
+
+// PATCH — reset + re-grade 1 trận (dùng khi trận bị chấm sai vì tỉ số sai/sớm)
+// Body: { matchId: string }
+// Quy trình:
+//   1. Reset tất cả prediction của trận về result=null
+//   2. Replay tất cả prediction khác theo thứ tự thời gian để tính lại balance đúng cho từng user-group
+//   3. Gọi gradeMatch() với tỉ số hiện tại (đúng)
+export async function PATCH(req: NextRequest) {
+  const admin = await requireAdmin()
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+
+  const { matchId } = await req.json().catch(() => ({ matchId: undefined }))
+  if (!matchId) return NextResponse.json({ error: "Cần matchId" }, { status: 400 })
+
+  const match = await prisma.match.findUnique({ where: { id: matchId } })
+  if (!match) return NextResponse.json({ error: "Trận không tồn tại" }, { status: 404 })
+  if (match.scoreHome == null || match.scoreAway == null) {
+    return NextResponse.json({ error: "Trận chưa có tỉ số" }, { status: 400 })
+  }
+
+  // 1. Lấy danh sách predictions đã chấm (để biết user-group nào bị ảnh hưởng)
+  const gradedPreds = await prisma.prediction.findMany({
+    where: { matchId, result: { not: null } },
+    select: { userId: true, groupId: true, result: true, points: true, betType: true },
+  })
+
+  const affectedPairs = new Map<string, { userId: string; groupId: string }>()
+  for (const p of gradedPreds) {
+    affectedPairs.set(`${p.userId}:${p.groupId}`, { userId: p.userId, groupId: p.groupId })
+  }
+
+  // 2. Reset tất cả predictions của trận này
+  await prisma.prediction.updateMany({
+    where: { matchId },
+    data: { result: null, points: 0 },
+  })
+
+  // 3. Với mỗi user-group bị ảnh hưởng: replay tất cả prediction ĐÃ CHẤM KHÁC
+  //    theo thứ tự thời gian, tính lại balance với clampPoints, rồi update GroupMember
+  for (const { userId, groupId } of affectedPairs.values()) {
+    const otherPreds = await prisma.prediction.findMany({
+      where: {
+        userId, groupId,
+        matchId: { not: matchId },
+        result: { not: null },
+      },
+      orderBy: { createdAt: "asc" },
+      select: { points: true, result: true, betType: true },
+    })
+
+    let balance = 100
+    let wins = 0, losses = 0, skipped = 0
+    for (const p of otherPreds) {
+      balance = Math.max(0, balance + p.points)
+      if (p.result === "win") wins++
+      else if (p.betType === "skip") skipped++
+      else losses++
+    }
+
+    await prisma.groupMember.update({
+      where: { userId_groupId: { userId, groupId } },
+      data: { points: balance, wins, losses, skipped },
+    })
+  }
+
+  // 4. Re-grade với tỉ số đúng
+  if (match.status !== "finished") {
+    await prisma.match.update({ where: { id: matchId }, data: { status: "finished" } })
+  }
+  const result = await gradeMatch(matchId)
+
+  return NextResponse.json({
+    ok: true,
+    match: `${match.homeTeam} vs ${match.awayTeam}`,
+    score: `${match.scoreHome}-${match.scoreAway}`,
+    affectedUserGroups: affectedPairs.size,
+    resetCount: gradedPreds.length,
+    regrade: result ? { wins: result.wins, losses: result.losses, newlyGraded: result.newlyGraded } : null,
+  })
+}
+
