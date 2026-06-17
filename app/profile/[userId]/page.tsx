@@ -32,8 +32,8 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   const ownedSet = new Set(userBadges.map(b => b.badgeCode))
 
   const predictions = await prisma.prediction.findMany({
-    where: { userId: target.id },
-    include: { match: true, group: { select: { name: true } } },
+    where: { userId: target.id, groupId: sharedGroup?.groupId ?? "none" },
+    include: { match: true },
     orderBy: { createdAt: "desc" },
   })
 
@@ -58,7 +58,6 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
     result: p.result ?? (p.match.status === "live" ? "live" : "pending"),
     points: p.points,
     actualScore: p.match.scoreHome !== null ? `${p.match.scoreHome}-${p.match.scoreAway}` : null,
-    groupName: p.group.name,
   }))
 
   // Điểm trong hội chung

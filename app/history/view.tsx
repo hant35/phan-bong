@@ -12,7 +12,7 @@ const BET_TYPES = ["Tất cả kèo", "Kèo chấp", "Tổng bàn thắng", "T�
 interface Pick {
   id: string; match: string; homeFlag: string; awayFlag: string;
   pickLabel: string; betType: string; confidence: number;
-  result: string; points: number; actualScore: string | null; groupName: string;
+  result: string; points: number; actualScore: string | null;
 }
 
 export function HistoryView({ picks }: { picks: Pick[] }) {
@@ -130,7 +130,6 @@ export function HistoryView({ picks }: { picks: Pick[] }) {
                 <span className="text-white/60 font-semibold">{p.pickLabel}</span>
                 <span> · CF{p.confidence}</span>
                 {p.actualScore && <span> · KQ {p.actualScore}</span>}
-                <span> · {p.groupName}</span>
               </div>
             </div>
             <span className={cn("text-sm font-black px-2.5 py-1 rounded-xl flex-shrink-0",

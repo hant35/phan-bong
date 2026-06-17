@@ -1,15 +1,18 @@
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
+import { getDefaultGroupId } from "@/lib/default-group"
 import { HistoryView } from "./view"
 
 export default async function HistoryPage() {
   const user = await getCurrentUser()
   if (!user) redirect("/login")
 
+  const defaultGroupId = await getDefaultGroupId(user.id)
+
   const picks = await prisma.prediction.findMany({
-    where: { userId: user.id },
-    include: { match: true, group: { select: { name: true } } },
+    where: { userId: user.id, groupId: defaultGroupId ?? "none" },
+    include: { match: true },
     orderBy: { createdAt: "desc" },
   })
 
@@ -26,7 +29,6 @@ export default async function HistoryPage() {
     result: p.result ?? (p.match.status === "live" ? "live" : "pending"),
     points: p.points,
     actualScore: p.match.scoreHome !== null ? `${p.match.scoreHome}-${p.match.scoreAway}` : null,
-    groupName: p.group.name,
   }))
 
   return <HistoryView picks={data} />
