@@ -14,16 +14,18 @@ export function PullToRefresh() {
   const pullingRef = useRef(false)
 
   useEffect(() => {
+    const scrollTop = () => (document.getElementById("main-scroll")?.scrollTop ?? window.scrollY)
+
     const onTouchStart = (e: TouchEvent) => {
       // Chỉ bắt đầu kéo khi đang ở đầu trang
-      if (window.scrollY > 0) return
+      if (scrollTop() > 0) return
       startYRef.current = e.touches[0].clientY
       pullingRef.current = false
     }
 
     const onTouchMove = (e: TouchEvent) => {
       if (startYRef.current === null) return
-      if (window.scrollY > 0) { startYRef.current = null; return }
+      if (scrollTop() > 0) { startYRef.current = null; return }
 
       const dy = e.touches[0].clientY - startYRef.current
       if (dy <= 0) return
