@@ -16,6 +16,9 @@ export type BadgeCode =
   | "thua_hoai"
   | "vua_exact"
   | "dao_keo"
+  | "sai_20"
+  | "sai_40"
+  | "sai_60"
 
 async function hasBadge(userId: string, badgeCode: BadgeCode): Promise<boolean> {
   const row = await prisma.userBadge.findUnique({
@@ -153,6 +156,12 @@ async function countAllInLosses(userId: string): Promise<number> {
   })
 }
 
+async function countTotalLosses(userId: string): Promise<number> {
+  return prisma.prediction.count({
+    where: { userId, result: "loss", betType: { not: "skip" } },
+  })
+}
+
 /** Kiểm tra badge sau khi user đặt / sửa pick */
 export async function checkBadgesOnPick(
   userId: string,
@@ -201,5 +210,11 @@ export async function checkBadgesAfterGrading(userIds: string[]): Promise<void> 
 
     const underdogWins = await countUnderdogWins(userId)
     if (underdogWins >= 1) await grantBadge(userId, "cu_lua")
+
+    // Huy hiệu vui khi tích lũy nhiều lần đoán sai
+    const totalLosses = await countTotalLosses(userId)
+    if (totalLosses >= 60) await grantBadge(userId, "sai_60")
+    else if (totalLosses >= 40) await grantBadge(userId, "sai_40")
+    else if (totalLosses >= 20) await grantBadge(userId, "sai_20")
   }
 }

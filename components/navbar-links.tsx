@@ -18,8 +18,8 @@ export function NavbarLinks({
 
   if (mobile) {
     return (
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/5 flex pb-safe"
-        style={{ background: "rgba(15,17,23,0.95)", backdropFilter: "blur(20px)" }}>
+      <nav className="md:hidden border-t border-white/5 flex pb-safe flex-shrink-0"
+        style={{ background: "#0f1117" }}>
         {items.map(({ href, label, icon, exact, matchPrefix }) => {
           const Icon = iconMap[icon]
           const active = matchPrefix

@@ -97,6 +97,50 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   const correctPicks = await prisma.prediction.count({ where: { groupId: id, result: "win" } })
   const totalResolved = await prisma.prediction.count({ where: { groupId: id, result: { in: ["win", "loss"] } } })
 
+  // Fun stats: edit habits
+  const editedPreds = await prisma.prediction.findMany({
+    where: { groupId: id, editCount: { gt: 0 } },
+    select: { userId: true, editCount: true, updatedAt: true, match: { select: { kickoffAt: true } } },
+    orderBy: { updatedAt: "desc" },
+  })
+  // Ai hay đổi nhất
+  const editCountByUser: Record<string, { userId: string; totalEdits: number }> = {}
+  for (const p of editedPreds) {
+    if (!editCountByUser[p.userId]) editCountByUser[p.userId] = { userId: p.userId, totalEdits: 0 }
+    editCountByUser[p.userId].totalEdits += p.editCount
+  }
+  const sortedEditors = Object.values(editCountByUser).sort((a, b) => b.totalEdits - a.totalEdits)
+  // Ai đổi sát giờ nhất (updatedAt gần kickoffAt nhất, tính trung bình phút trước kickoff)
+  const minutesBeforeByUser: Record<string, { userId: string; totalMinutes: number; count: number }> = {}
+  for (const p of editedPreds) {
+    const minutesBefore = (p.match.kickoffAt.getTime() - p.updatedAt.getTime()) / 60000
+    if (minutesBefore >= 0 && minutesBefore <= 24 * 60) { // chỉ tính nếu hợp lệ
+      if (!minutesBeforeByUser[p.userId]) minutesBeforeByUser[p.userId] = { userId: p.userId, totalMinutes: 0, count: 0 }
+      minutesBeforeByUser[p.userId].totalMinutes += minutesBefore
+      minutesBeforeByUser[p.userId].count++
+    }
+  }
+  const sortedLastMinute = Object.values(minutesBeforeByUser)
+    .filter(u => u.count > 0)
+    .map(u => ({ userId: u.userId, avgMinutes: u.totalMinutes / u.count }))
+    .sort((a, b) => a.avgMinutes - b.avgMinutes)
+
+  const memberMap = Object.fromEntries(members.map(m => [m.userId, m.user]))
+  const funStats = {
+    topEditors: sortedEditors.slice(0, 3).map(e => ({
+      userId: e.userId,
+      name: memberMap[e.userId]?.name ?? "?",
+      avatar: memberMap[e.userId]?.avatar ?? "??",
+      totalEdits: e.totalEdits,
+    })),
+    lastMinuters: sortedLastMinute.slice(0, 3).map(u => ({
+      userId: u.userId,
+      name: memberMap[u.userId]?.name ?? "?",
+      avatar: memberMap[u.userId]?.avatar ?? "??",
+      avgMinutes: Math.round(u.avgMinutes),
+    })),
+  }
+
   // Thua theo vòng: chỉ hiển thị từ vòng đầu tới vòng đang diễn ra của giải (không phải riêng hội)
   const allMatchRounds = await prisma.match.findMany({ select: { stage: true, status: true, kickoffAt: true } })
   let currentRoundIdx = 0
@@ -185,6 +229,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
       winRate: totalResolved > 0 ? Math.round(correctPicks / totalResolved * 100) : 0,
       activityPerDay: Math.round(activities.length / 7),
     }}
+    funStats={funStats}
     lossesByRound={lossesByRound}
     champion={members[0] ? {
       name: members[0].user.name, displayName: members[0].user.displayName ?? "",

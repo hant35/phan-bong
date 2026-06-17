@@ -12,8 +12,15 @@ export default async function ProfilePage() {
   const userBadges = await prisma.userBadge.findMany({ where: { userId: user.id } })
   const ownedSet = new Set(userBadges.map(b => b.badgeCode))
 
-  const predictions = await prisma.prediction.findMany({
+  const memberships = await prisma.groupMember.findMany({
     where: { userId: user.id },
+    orderBy: { joinedAt: "asc" },
+    include: { group: { select: { id: true, name: true } } },
+  })
+  const defaultGroupId = user.defaultGroupId ?? memberships[0]?.group.id ?? null
+
+  const predictions = await prisma.prediction.findMany({
+    where: { userId: user.id, ...(defaultGroupId ? { groupId: defaultGroupId } : { groupId: "none" }) },
     include: { match: true },
     orderBy: { createdAt: "desc" },
   })
@@ -40,12 +47,6 @@ export default async function ProfilePage() {
     points: p.points,
     actualScore: p.match.scoreHome !== null ? `${p.match.scoreHome}-${p.match.scoreAway}` : null,
   }))
-
-  const memberships = await prisma.groupMember.findMany({
-    where: { userId: user.id },
-    orderBy: { joinedAt: "asc" },
-    include: { group: { select: { id: true, name: true } } },
-  })
 
   const [groupPointsSum, leaderboard] = await Promise.all([
     sumUserGroupPoints(user.id),
@@ -76,7 +77,7 @@ export default async function ProfilePage() {
       below: belowMe ? { name: belowMe.user.name, avatar: belowMe.user.avatar ?? "??", points: belowMe.points, rank: myIdx + 2 } : null,
     }}
     groups={memberships.map(m => ({ id: m.group.id, name: m.group.name }))}
-    defaultGroupId={user.defaultGroupId ?? memberships[0]?.group.id ?? null}
+    defaultGroupId={defaultGroupId}
     quietHoursEnabled={user.quietHoursEnabled}
   />
 }

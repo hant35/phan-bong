@@ -46,21 +46,33 @@ interface UpcomingMatch {
   myPick: { betType: string; side: string | null; homeScore: number | null; awayScore: number | null; confidence: number } | null
 }
 
-export function GroupDetailView({ group, currentUserId, myRole, members, activities, upcomingMatches, stats, champion, lossesByRound }: {
+interface FunStats {
+  topEditors: { userId: string; name: string; avatar: string; totalEdits: number }[];
+  lastMinuters: { userId: string; name: string; avatar: string; avgMinutes: number }[];
+}
+
+export function GroupDetailView({ group, currentUserId, myRole, members, activities, upcomingMatches, stats, funStats, champion, lossesByRound }: {
   group: Group; currentUserId: string; myRole: string; members: Member[]; activities: Activity[]; upcomingMatches: UpcomingMatch[];
   stats: { totalPicks: number; winRate: number; activityPerDay: number };
+  funStats: FunStats;
   champion: { name: string; displayName: string; avatar: string; points: number; correct: number; total: number; streak: number } | null;
   lossesByRound: { round: string; losses: number }[];
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<"overview" | "leaderboard" | "activity" | "matches" | "members">("overview")
   const [copied, setCopied] = useState(false)
+  const [sortMode, setSortMode] = useState<"points" | "wins">("points")
+
+  const sortedMembers = sortMode === "wins"
+    ? [...members].sort((a, b) => b.wins - a.wins || b.points - a.points)
+    : members
 
   const isGroupAdmin = myRole === "owner" || myRole === "admin"
 
   // ── Inline pick state ──
   const [pickState, setPickState] = useState<Record<string, {
     betType: string; side: string | null; confidence: number; submitting: boolean; done: boolean; error: string | null
+    homeScore: number; awayScore: number
   }>>({})
 
   function getPickState(matchId: string, match: UpcomingMatch) {
@@ -74,6 +86,8 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
       submitting: false,
       done: match.hasPick,
       error: null,
+      homeScore: match.myPick?.homeScore ?? 0,
+      awayScore: match.myPick?.awayScore ?? 0,
     }
   }
 
@@ -86,17 +100,24 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
 
   async function submitPick(match: UpcomingMatch) {
     const ps = getPickState(match.id, match)
-    if (!ps.side) return
+    // exact bet cần side = "exact", ah/ou cần side thật
+    if (ps.betType !== "exact" && !ps.side) return
     setPick(match.id, "submitting", true)
     setPick(match.id, "error", null)
     try {
+      const body: Record<string, unknown> = {
+        matchId: match.id, groupId: group.id, betType: ps.betType,
+        side: ps.betType === "exact" ? "exact" : ps.side,
+        confidence: ps.confidence ?? 1,
+      }
+      if (ps.betType === "exact") {
+        body.homeScore = ps.homeScore
+        body.awayScore = ps.awayScore
+      }
       const res = await fetch("/api/predictions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          matchId: match.id, groupId: group.id, betType: ps.betType, side: ps.side,
-          confidence: ps.confidence ?? 1,
-        }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -281,6 +302,52 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
             ))}
           </div>
 
+          {/* Thống kê vui */}
+          {(funStats.topEditors.length > 0 || funStats.lastMinuters.length > 0) && (
+            <div className="rounded-3xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center gap-1.5 px-4 pt-4 pb-2">
+                <Sparkles size={13} className="text-[#ffd700]" />
+                <h3 className="font-bold text-white text-xs md:text-sm">Thống kê vui</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-2 px-3 pb-3">
+                {funStats.topEditors.length > 0 && (
+                  <div className="rounded-2xl p-3 space-y-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <div className="text-[10px] text-white/40 font-bold uppercase tracking-wide">🔄 Hay đổi ý nhất</div>
+                    {funStats.topEditors.map((u, i) => (
+                      <div key={u.userId} className="flex items-center gap-2">
+                        <span className="text-[10px] text-white/30 w-3">{i + 1}</span>
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black flex-shrink-0"
+                          style={{ background: avatarGradients[i % avatarGradients.length], color: "#0f1117" }}>
+                          {u.avatar}
+                        </div>
+                        <span className="text-xs text-white/80 flex-1 truncate">{u.name}</span>
+                        <span className="text-xs font-black" style={{ color: "#ec4899" }}>{u.totalEdits}×</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {funStats.lastMinuters.length > 0 && (
+                  <div className="rounded-2xl p-3 space-y-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <div className="text-[10px] text-white/40 font-bold uppercase tracking-wide">⏱️ Sát giờ nhất</div>
+                    {funStats.lastMinuters.map((u, i) => (
+                      <div key={u.userId} className="flex items-center gap-2">
+                        <span className="text-[10px] text-white/30 w-3">{i + 1}</span>
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black flex-shrink-0"
+                          style={{ background: avatarGradients[i % avatarGradients.length], color: "#0f1117" }}>
+                          {u.avatar}
+                        </div>
+                        <span className="text-xs text-white/80 flex-1 truncate">{u.name}</span>
+                        <span className="text-xs font-black" style={{ color: "#ffd700" }}>
+                          {u.avgMinutes < 60 ? `${u.avgMinutes}ph` : `${Math.round(u.avgMinutes / 60)}h`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Thua theo vòng */}
           {lossesByRound.length > 0 && (
             <div className="rounded-3xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -335,9 +402,30 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                   const overPct = ouTotal > 0 ? Math.round(overCount / ouTotal * 100) : 50
                   const underPct = ouTotal > 0 ? 100 - overPct : 50
 
+                  const mult = match.pointsMultiplier ?? 1
+                  const isHighMult = mult >= 2
+
                   return (
-                    <div key={match.id} className="rounded-xl px-3 py-3 space-y-2 md:px-2.5 md:py-2 md:space-y-1.5"
-                      style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <div key={match.id}
+                      className={cn("rounded-xl px-3 py-3 space-y-2 md:px-2.5 md:py-2 md:space-y-1.5 relative", isHighMult && mult >= 3 && "animate-[glow-pulse_3s_ease-in-out_infinite]")}
+                      style={isHighMult ? {
+                        background: "rgba(255,215,0,0.04)",
+                        border: `1px solid rgba(255,215,0,${mult >= 3 ? 0.4 : 0.25})`,
+                        boxShadow: `0 0 ${mult >= 3 ? 12 : 6}px rgba(255,215,0,${mult >= 3 ? 0.15 : 0.08})`,
+                      } : {
+                        background: "rgba(255,255,255,0.02)",
+                        border: "1px solid rgba(255,255,255,0.05)",
+                      }}>
+
+                      {/* Banner hệ số cao */}
+                      {isHighMult && (
+                        <div className="flex items-center gap-1.5 -mt-1 mb-1">
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md"
+                            style={{ background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,170,0,0.15))", color: "#ffd700", border: "1px solid rgba(255,215,0,0.2)" }}>
+                            {mult >= 3 ? "⭐" : "🔥"} TRẬN ĐINH · Hệ số ×{mult}
+                          </span>
+                        </div>
+                      )}
 
                       {/* Match header */}
                       <div className="flex items-center gap-1.5 md:gap-1">
@@ -494,9 +582,9 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                         <div className="text-xs text-white/40 text-center py-1">Kèo chưa đủ thông tin</div>
                       ) : (
                         <div className="space-y-2 md:space-y-1.5">
-                          {match.allowedBetTypes.filter(t => t !== "exact").length > 1 && (
+                          {match.allowedBetTypes.length > 1 && (
                             <div className="flex gap-1.5 md:gap-1">
-                              {[{ id: "ah", label: "Kèo chấp" }, { id: "ou", label: "Tổng bàn thắng" }]
+                              {[{ id: "ah", label: "Kèo chấp" }, { id: "ou", label: "Tổng bàn" }, { id: "exact", label: "Tỉ số" }]
                                 .filter(bt => match.allowedBetTypes.includes(bt.id))
                                 .map(bt => (
                                   <button key={bt.id} onClick={() => setPick(match.id, "betType", bt.id)}
@@ -553,6 +641,28 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                             </div>
                           )}
 
+                          {ps.betType === "exact" && (
+                            <div className="rounded-xl py-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                              <div className="flex items-center justify-center gap-3">
+                                <button onClick={() => setPick(match.id, "homeScore", Math.max(0, ps.homeScore - 1))}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
+                                  style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
+                                <span className="text-2xl font-black text-[#00e676] w-6 text-center">{ps.homeScore}</span>
+                                <button onClick={() => setPick(match.id, "homeScore", ps.homeScore + 1)}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
+                                  style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
+                                <span className="text-xl font-black text-white/15">:</span>
+                                <button onClick={() => setPick(match.id, "awayScore", Math.max(0, ps.awayScore - 1))}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
+                                  style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
+                                <span className="text-2xl font-black text-[#00e676] w-6 text-center">{ps.awayScore}</span>
+                                <button onClick={() => setPick(match.id, "awayScore", ps.awayScore + 1)}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white text-sm font-bold transition-colors"
+                                  style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
+                              </div>
+                            </div>
+                          )}
+
                           {ps.error && <p className="text-xs md:text-[10px] text-red-400 px-1">{ps.error}</p>}
 
                           <HopeStarPicker
@@ -563,9 +673,9 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
 
                           <div className="flex gap-2 md:gap-1.5">
                             <button onClick={() => submitPick(match)}
-                              disabled={ps.submitting || !ps.side}
+                              disabled={ps.submitting || (ps.betType !== "exact" && !ps.side)}
                               className="flex-1 py-2 md:py-1.5 rounded-xl md:rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 md:gap-1 transition-all disabled:opacity-40"
-                              style={ps.side
+                              style={ps.side || ps.betType === "exact"
                                 ? { background: "linear-gradient(135deg,#00e676,#00bcd4)", color: "#0f1117" }
                                 : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)" }}>
                               {ps.submitting ? <Loader2 size={13} className="md:w-3 md:h-3 animate-spin"/> : <Zap size={13} className="md:w-3 md:h-3"/>}
@@ -615,19 +725,33 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
       )}
 
       {tab === "leaderboard" && (
+        <div className="space-y-2">
+        {/* Tùy chọn xếp hạng */}
+        <div className="flex gap-1 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)" }}>
+          {([
+            { id: "points", label: "🏆 Theo điểm" },
+            { id: "wins", label: "✅ Theo số lần đúng" },
+          ] as const).map(o => (
+            <button key={o.id} onClick={() => setSortMode(o.id)}
+              className={cn("flex-1 py-2 text-xs font-bold rounded-xl transition-all", sortMode === o.id ? "text-white" : "text-white/30")}
+              style={sortMode === o.id ? { background: "rgba(255,255,255,0.08)" } : {}}>
+              {o.label}
+            </button>
+          ))}
+        </div>
         <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
           {/* Header */}
           <div className="flex items-center px-3 py-2.5" style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             <div className="w-7 sm:w-8 text-center text-[10px] font-bold text-white/30">#</div>
             <div className="flex-1 text-[10px] font-bold text-white/30 pl-1">Thành viên</div>
-            <div className="w-8 sm:w-10 text-center text-[10px] font-bold text-white/30">Đoán</div>
+            <div className="w-9 sm:w-12 text-center text-[10px] font-bold text-white/30">Đã đoán</div>
             <div className="w-8 sm:w-10 text-center text-[10px] font-bold" style={{ color: "rgba(0,230,118,0.5)" }}>Đúng</div>
             <div className="w-8 sm:w-10 text-center text-[10px] font-bold" style={{ color: "rgba(255,82,82,0.5)" }}>Sai</div>
-            <div className="w-8 sm:w-10 text-center text-[10px] font-bold" style={{ color: "rgba(255,152,0,0.5)" }}>Bỏ</div>
             <div className="w-10 sm:w-12 text-center text-[10px] font-bold text-white/30">Điểm</div>
           </div>
           {/* Rows */}
-          {members.map((m, i) => {
+          {sortedMembers.map((m, i) => {
+            const wrong = m.losses + m.skipped
             return (
               <div key={m.userId}
                 className={cn("flex items-center px-3 py-2.5 transition-colors", i < members.length - 1 ? "border-b border-white/5" : "")}
@@ -644,9 +768,9 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                           : i === 1 ? "linear-gradient(135deg, #b0bec5, #78909c)"
                           : "linear-gradient(135deg, #cd7f32, #8d4e0b)",
                         color: "#0f1117"
-                      }}>{i === 0 ? <Crown size={10}/> : m.rank}</div>
+                      }}>{i === 0 ? <Crown size={10}/> : i + 1}</div>
                   ) : (
-                    <span className="text-xs font-bold text-white/50">{m.rank}</span>
+                    <span className="text-xs font-bold text-white/50">{i + 1}</span>
                   )}
                 </div>
                 {/* Avatar + Name */}
@@ -667,19 +791,18 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                     )}
                   </div>
                 </div>
-                {/* Đoán */}
-                <div className="w-8 sm:w-10 text-center text-[11px] sm:text-xs font-semibold text-white/40">{m.predicted}</div>
+                {/* Đã đoán */}
+                <div className="w-9 sm:w-12 text-center text-[11px] sm:text-xs font-semibold text-white/40">{m.predicted}</div>
                 {/* Đúng */}
-                <div className="w-8 sm:w-10 text-center text-[11px] sm:text-xs font-bold" style={{ color: "#00e676" }}>{m.wins}</div>
-                {/* Sai */}
-                <div className="w-8 sm:w-10 text-center text-[11px] sm:text-xs font-bold" style={{ color: "#ff5252" }}>{m.losses}</div>
-                {/* Bỏ */}
-                <div className="w-8 sm:w-10 text-center text-[11px] sm:text-xs font-bold" style={{ color: m.skipped > 0 ? "#ff9800" : "rgba(255,255,255,0.15)" }}>{m.skipped}</div>
+                <div className={cn("w-8 sm:w-10 text-center text-[11px] sm:text-xs font-bold", sortMode === "wins" && "text-sm sm:text-base")} style={{ color: "#00e676" }}>{m.wins}</div>
+                {/* Sai = thua + bỏ */}
+                <div className="w-8 sm:w-10 text-center text-[11px] sm:text-xs font-bold" style={{ color: wrong > 0 ? "#ff5252" : "rgba(255,255,255,0.15)" }}>{wrong}</div>
                 {/* Điểm */}
                 <div className={cn("w-10 sm:w-12 text-center text-xs sm:text-sm font-black", m.isMe ? "text-[#00e676]" : "text-white")}>{m.points}</div>
               </div>
             )
           })}
+        </div>
         </div>
       )}
 
@@ -781,7 +904,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
             const resolved = m.wins + m.losses + m.skipped
             const winRate = resolved > 0 ? Math.round(m.wins / resolved * 100) : 0
             return (
-              <div key={m.userId} className="rounded-2xl p-3 flex items-center gap-3"
+              <Link key={m.userId} href={m.isMe ? "/profile" : `/profile/${m.userId}`} className="rounded-2xl p-3 flex items-center gap-3 hover:opacity-80 transition-opacity"
                 style={{ background: m.isMe ? "rgba(0,230,118,0.05)" : "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0"
                   style={{ background: avatarGradients[i % avatarGradients.length], color: "white" }}>{m.avatar}</div>
@@ -819,7 +942,7 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
                   <div className={cn("text-sm font-black", m.isMe ? "text-[#00e676]" : "text-white/70")}>{m.points}</div>
                   <div className="text-[10px] text-white/50">#{m.rank}</div>
                 </div>
-              </div>
+              </Link>
             )
           })}
         </div>

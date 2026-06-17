@@ -196,6 +196,9 @@ const BADGES = [
   { code: "thua_hoai",    name: "Thua Hoài Không Chán",   emoji: "😢", description: "Sai 5 trận liên tiếp" },
   { code: "vua_exact",    name: "Vua Tỉ Số Chính Xác",   emoji: "👑", description: "Đoán đúng tỉ số 5 lần" },
   { code: "dao_keo",      name: "Đạo Kèo Thượng Thừa",   emoji: "⚔️", description: "Thắng 10 kèo chấp liên tiếp" },
+  { code: "sai_20",       name: "Sai Cho Vui",           emoji: "🤡", description: "Đoán sai 20 lần — không sao, vui là chính!" },
+  { code: "sai_40",       name: "Trùm Cuối Đoán Trật",   emoji: "💩", description: "Đoán sai 40 lần — huyền thoại sống!" },
+  { code: "sai_60",       name: "Vua Úp Mặt",            emoji: "🪦", description: "Đoán sai 60 lần — thôi để người khác đoán đi!" },
 ]
 
 /* ── 20 Users ── */

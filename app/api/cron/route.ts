@@ -62,9 +62,9 @@ export async function GET(req: NextRequest) {
         where: { id: match.id },
         data: {
           status: "live",
-          scoreHome: match.scoreHome ?? 0,
-          scoreAway: match.scoreAway ?? 0,
           minute: 1,
+          // Không set score giả 0-0 — để null cho đến khi sync API trả về tỉ số thực
+          // (score giả 0-0 khiến cron tự chấm điểm sai sau 105 phút)
         },
       })
       results.push(`⚽ ${match.homeTeam} vs ${match.awayTeam} → LIVE`)
