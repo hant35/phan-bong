@@ -218,10 +218,18 @@ export async function PATCH(req: NextRequest) {
   }
 
   // 4. Re-grade với tỉ số đúng
-  if (match.status !== "finished") {
-    await prisma.match.update({ where: { id: matchId }, data: { status: "finished" } })
-  }
+  const now = new Date()
+  await prisma.match.update({
+    where: { id: matchId },
+    data: {
+      status: "finished",
+      finishedAt: match.finishedAt ?? now,
+      gradedAt: null, // reset để gradeMatch() bên dưới ghi lại
+    },
+  })
   const result = await gradeMatch(matchId)
+  // Đánh dấu đã chấm để cron không chấm lại
+  await prisma.match.update({ where: { id: matchId }, data: { gradedAt: now } })
 
   return NextResponse.json({
     ok: true,

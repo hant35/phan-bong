@@ -7,6 +7,9 @@ import { notifyOvertakenAfterGrading, snapshotGroupRanks } from "@/lib/overtaken
 // Grading Engine — chấm điểm khi trận kết thúc
 // ══════════════════════════════════════════════════════════════
 
+/** Số phút chờ sau khi trận kết thúc mới chấm điểm — để tỉ số cuối được sync về từ API */
+export const GRADE_DELAY_MINUTES = 60
+
 export interface GradingResult {
   matchId: string
   homeTeam: string

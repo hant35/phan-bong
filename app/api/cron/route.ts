@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { notifyUser } from "@/lib/notify"
-import { gradeMatch } from "@/lib/grading"
+import { gradeMatch, GRADE_DELAY_MINUTES } from "@/lib/grading"
 import { sendKickoffReminders } from "@/lib/kickoff-reminders"
 import { notifyMatchResults } from "@/lib/result-notify"
 import { syncFootballData } from "@/lib/sync-sources"
@@ -103,24 +103,9 @@ export async function GET(req: NextRequest) {
   for (const match of shouldFinish) {
     await prisma.match.update({
       where: { id: match.id },
-      data: { status: "finished" },
+      data: { status: "finished", finishedAt: match.finishedAt ?? now },
     })
-    results.push(`🏁 ${match.homeTeam} vs ${match.awayTeam} → FINISHED (${match.scoreHome}-${match.scoreAway})`)
-
-    try {
-      const gr = await gradeMatch(match.id)
-      if (gr) {
-        results.push(`🏆 Chấm điểm: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
-        if (gr.newlyGraded > 0 && match.scoreHome != null && match.scoreAway != null) {
-          const n = await notifyMatchResults(
-            match.id, match.homeTeam, match.awayTeam, match.scoreHome, match.scoreAway,
-          ).catch(() => 0)
-          results.push(`📲 Thông báo cho ${n} người`)
-        }
-      }
-    } catch (e) {
-      results.push(`❌ Lỗi chấm điểm: ${e instanceof Error ? e.message : String(e)}`)
-    }
+    results.push(`🏁 ${match.homeTeam} vs ${match.awayTeam} → FINISHED (${match.scoreHome}-${match.scoreAway}) — chấm sau ${GRADE_DELAY_MINUTES} phút`)
   }
 
   // ── 3. live quá 130 phút → tự kết thúc (safety net) ──
@@ -136,24 +121,38 @@ export async function GET(req: NextRequest) {
     if (match.scoreHome != null && match.scoreAway != null) {
       await prisma.match.update({
         where: { id: match.id },
-        data: { status: "finished" },
+        data: { status: "finished", finishedAt: match.finishedAt ?? now },
       })
-      results.push(`⏰ ${match.homeTeam} vs ${match.awayTeam} → FINISHED (auto, live > 130p)`)
+      results.push(`⏰ ${match.homeTeam} vs ${match.awayTeam} → FINISHED (auto, live > 130p) — chấm sau ${GRADE_DELAY_MINUTES} phút`)
+    }
+  }
 
-      try {
-        const gr = await gradeMatch(match.id)
-        if (gr) {
-          results.push(`🏆 Chấm điểm: ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
-          if (gr.newlyGraded > 0 && match.scoreHome != null && match.scoreAway != null) {
-            const n = await notifyMatchResults(
-              match.id, match.homeTeam, match.awayTeam, match.scoreHome, match.scoreAway,
-            ).catch(() => 0)
-            results.push(`📲 Thông báo cho ${n} người`)
-          }
+  // ── 3b. Chấm điểm các trận đã kết thúc đủ GRADE_DELAY_MINUTES ──
+  // Tỉ số đã được sync mới nhất ở block 0 (gọi API) nên đây là kết quả cuối.
+  const gradeCutoff = new Date(now.getTime() - GRADE_DELAY_MINUTES * 60 * 1000)
+  const toGrade = await prisma.match.findMany({
+    where: {
+      status: "finished",
+      gradedAt: null,
+      finishedAt: { not: null, lte: gradeCutoff },
+    },
+  })
+
+  for (const match of toGrade) {
+    try {
+      const gr = await gradeMatch(match.id)
+      await prisma.match.update({ where: { id: match.id }, data: { gradedAt: now } })
+      if (gr) {
+        results.push(`🏆 Chấm điểm ${match.homeTeam} vs ${match.awayTeam} (${match.scoreHome}-${match.scoreAway}): ${gr.wins} thắng, ${gr.losses} thua, ${gr.skipped} bỏ lỡ`)
+        if (gr.newlyGraded > 0 && match.scoreHome != null && match.scoreAway != null) {
+          const n = await notifyMatchResults(
+            match.id, match.homeTeam, match.awayTeam, match.scoreHome, match.scoreAway,
+          ).catch(() => 0)
+          results.push(`📲 Thông báo cho ${n} người`)
         }
-      } catch (e) {
-        results.push(`❌ Lỗi chấm điểm: ${e instanceof Error ? e.message : String(e)}`)
       }
+    } catch (e) {
+      results.push(`❌ Lỗi chấm điểm ${match.homeTeam} vs ${match.awayTeam}: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
 

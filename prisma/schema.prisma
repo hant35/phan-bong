@@ -123,6 +123,8 @@ model Match {
   scoreHome   Int?
   scoreAway   Int?
   minute      Int?
+  finishedAt  DateTime?    // thời điểm trận chuyển sang finished (bắt đầu đếm giờ chờ chấm)
+  gradedAt    DateTime?    // thời điểm đã chấm điểm (null = chưa chấm)
   ahLine      Float?
   ouLine      Float?
   weatherIcon String?
