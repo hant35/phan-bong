@@ -48,7 +48,8 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
     }
   }
 
-  // Lấy trận đang live + 5 trận sắp tới (bao gồm cả chưa có config)
+  // Lấy trận đang live + tất cả trận sắp tới đã mở kèo (có ahLine/ouLine hoặc có group config)
+  const configuredMatchIds = groupConfigs.map(c => c.matchId)
   const [liveMatches, scheduledMatches] = await Promise.all([
     prisma.match.findMany({
       where: { status: "live" },
@@ -56,9 +57,16 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
       include: { predictions: { where: { userId: user.id, groupId: id } } },
     }),
     prisma.match.findMany({
-      where: { status: "scheduled", kickoffAt: { gt: new Date() } },
+      where: {
+        status: "scheduled",
+        kickoffAt: { gt: new Date() },
+        OR: [
+          { ahLine: { not: null } },
+          { ouLine: { not: null } },
+          { id: { in: configuredMatchIds } },
+        ],
+      },
       orderBy: { kickoffAt: "asc" },
-      take: 5,
       include: { predictions: { where: { userId: user.id, groupId: id } } },
     }),
   ])
