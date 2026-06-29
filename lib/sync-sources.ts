@@ -334,8 +334,8 @@ export async function syncFootballData(apiKey: string): Promise<SyncResult> {
               stage,
               venue: ext.venue || null,
               status: FD_STATUS_MAP[ext.status] || "scheduled",
-              scoreHome: ext.score?.fullTime?.home ?? null,
-              scoreAway: ext.score?.fullTime?.away ?? null,
+              scoreHome: (ext.score?.duration !== "REGULAR" && ext.score?.regularTime ? ext.score.regularTime : ext.score?.fullTime)?.home ?? null,
+              scoreAway: (ext.score?.duration !== "REGULAR" && ext.score?.regularTime ? ext.score.regularTime : ext.score?.fullTime)?.away ?? null,
             },
           })
           // Add to localMatches to prevent duplicates in subsequent iterations
@@ -357,11 +357,15 @@ export async function syncFootballData(apiKey: string): Promise<SyncResult> {
       // Đánh dấu mốc kết thúc — KHÔNG chấm ngay, để cron chấm sau GRADE_DELAY_MINUTES
       if (newStatus === "finished" && local.status !== "finished") updates.finishedAt = new Date()
 
-      if (ext.score?.fullTime?.home != null && ext.score.fullTime.home !== local.scoreHome) {
-        updates.scoreHome = ext.score.fullTime.home
+      // Luôn lưu tỉ số 90 phút chính thức — regularTime có giá trị khi trận có hiệp phụ/pen
+      const ftScore = ext.score?.duration !== "REGULAR" && ext.score?.regularTime
+        ? ext.score.regularTime
+        : ext.score?.fullTime
+      if (ftScore?.home != null && ftScore.home !== local.scoreHome) {
+        updates.scoreHome = ftScore.home
       }
-      if (ext.score?.fullTime?.away != null && ext.score.fullTime.away !== local.scoreAway) {
-        updates.scoreAway = ext.score.fullTime.away
+      if (ftScore?.away != null && ftScore.away !== local.scoreAway) {
+        updates.scoreAway = ftScore.away
       }
       if (ext.minute != null && ext.minute !== local.minute) {
         updates.minute = ext.minute
@@ -540,8 +544,8 @@ export async function syncApiFootball(apiKey: string): Promise<SyncResult> {
               stage: "Vòng bảng",
               venue: fix.fixture?.venue?.name || null,
               status,
-              scoreHome: fix.goals?.home ?? null,
-              scoreAway: fix.goals?.away ?? null,
+              scoreHome: fix.score?.fulltime?.home ?? fix.goals?.home ?? null,
+              scoreAway: fix.score?.fulltime?.away ?? fix.goals?.away ?? null,
             },
           })
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -562,12 +566,14 @@ export async function syncApiFootball(apiKey: string): Promise<SyncResult> {
         if (local.status !== "finished") { updates.status = "finished"; updates.finishedAt = new Date() }
       }
 
-      // Scores
-      if (fix.goals?.home != null && fix.goals.home !== local.scoreHome) {
-        updates.scoreHome = fix.goals.home
+      // Tỉ số 90 phút: dùng score.fulltime (90p), fallback fix.goals khi đang live
+      const apiScore90 = fix.score?.fulltime
+      const scoreSource = apiScore90?.home != null ? apiScore90 : fix.goals
+      if (scoreSource?.home != null && scoreSource.home !== local.scoreHome) {
+        updates.scoreHome = scoreSource.home
       }
-      if (fix.goals?.away != null && fix.goals.away !== local.scoreAway) {
-        updates.scoreAway = fix.goals.away
+      if (scoreSource?.away != null && scoreSource.away !== local.scoreAway) {
+        updates.scoreAway = scoreSource.away
       }
       // Minute
       if (fix.fixture?.status?.elapsed != null && fix.fixture.status.elapsed !== local.minute) {
