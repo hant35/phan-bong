@@ -418,8 +418,11 @@ export async function syncOpenFootball(): Promise<SyncResult> {
     for (const ext of allExtMatches) {
       const homeName = (ext as { team1?: string }).team1 || ""
       const awayName = (ext as { team2?: string }).team2 || ""
-      const extData = ext as { date?: string; time?: string; group?: string; ground?: string; score1?: number; score2?: number }
+      const extData = ext as { date?: string; time?: string; group?: string; ground?: string; score?: { ft?: [number, number] } }
       const extDate = extData.date ? new Date(extData.date) : undefined
+      // CHỈ lấy tỉ số 90 phút chính thức (score.ft) — bỏ qua score.et (hiệp phụ) và score.p (penalty)
+      const ftHome = extData.score?.ft?.[0]
+      const ftAway = extData.score?.ft?.[1]
 
       const local = findLocalMatch(localMatches, null, homeName, awayName, extDate)
 
@@ -443,9 +446,9 @@ export async function syncOpenFootball(): Promise<SyncResult> {
               kickoffAt,
               stage: extData.group || "Vòng bảng",
               venue: extData.ground || null,
-              status: extData.score1 != null ? "finished" : "scheduled",
-              scoreHome: extData.score1 ?? null,
-              scoreAway: extData.score2 ?? null,
+              status: ftHome != null ? "finished" : "scheduled",
+              scoreHome: ftHome ?? null,
+              scoreAway: ftAway ?? null,
             },
           })
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -457,15 +460,14 @@ export async function syncOpenFootball(): Promise<SyncResult> {
       }
 
       const updates: Record<string, unknown> = {}
-      const score = (ext as { score1?: number; score2?: number })
 
-      if (score.score1 != null && score.score1 !== local.scoreHome) {
-        updates.scoreHome = score.score1
+      if (ftHome != null && ftHome !== local.scoreHome) {
+        updates.scoreHome = ftHome
       }
-      if (score.score2 != null && score.score2 !== local.scoreAway) {
-        updates.scoreAway = score.score2
+      if (ftAway != null && ftAway !== local.scoreAway) {
+        updates.scoreAway = ftAway
       }
-      if (score.score1 != null && score.score2 != null && local.status !== "finished") {
+      if (ftHome != null && ftAway != null && local.status !== "finished") {
         updates.status = "finished"
         updates.finishedAt = new Date()
       }
