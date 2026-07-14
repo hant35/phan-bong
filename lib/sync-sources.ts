@@ -269,7 +269,9 @@ const FD_STATUS_MAP: Record<string, string> = {
 }
 
 export async function syncFootballData(apiKey: string): Promise<SyncResult> {
-  const url = "https://api.football-data.org/v4/competitions/WC/matches?limit=100"
+  // Không giới hạn limit: WC 2026 có 104 trận, limit=100 sẽ cắt mất các trận cuối
+  // giải (bán kết, tranh hạng ba, chung kết) khiến chúng không bao giờ được sync.
+  const url = "https://api.football-data.org/v4/competitions/WC/matches"
   const headers = { "X-Auth-Token": apiKey }
   const result: SyncResult = {
     source: "Football-Data.org", updated: 0, errors: [], details: [],
