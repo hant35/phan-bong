@@ -19,6 +19,40 @@ export async function GET(req: NextRequest) {
   const now = new Date()
   const results: string[] = []
 
+  // ── 0z. Seed 2 trận cuối WC 2026 nếu chưa có (idempotent) ──
+  // Football-Data thường không trả về stage này qua endpoint cũ; seed thủ công
+  // để user có thể đoán trước khi trận diễn ra.
+  try {
+    const FINAL_MATCHES = [
+      {
+        homeTeam: "Anh", awayTeam: "Pháp",
+        homeFlag: "gb-eng", awayFlag: "fr",
+        homeColor: "#CF081F", awayColor: "#002395",
+        kickoffAt: new Date("2026-07-18T17:00:00Z"),
+        stage: "Tranh hạng ba", venue: "Hard Rock Stadium, Miami",
+      },
+      {
+        homeTeam: "Argentina", awayTeam: "Tây Ban Nha",
+        homeFlag: "ar", awayFlag: "es",
+        homeColor: "#74ACDF", awayColor: "#AA151B",
+        kickoffAt: new Date("2026-07-19T19:00:00Z"),
+        stage: "Chung kết", venue: "MetLife Stadium, New York",
+      },
+    ]
+    for (const m of FINAL_MATCHES) {
+      const existing = await prisma.match.findFirst({
+        where: { homeTeam: m.homeTeam, awayTeam: m.awayTeam, stage: m.stage },
+        select: { id: true },
+      })
+      if (!existing) {
+        await prisma.match.create({ data: { ...m, status: "scheduled" } })
+        results.push(`🆕 Seed: ${m.homeTeam} vs ${m.awayTeam} (${m.stage})`)
+      }
+    }
+  } catch (e) {
+    results.push(`❌ Seed final matches failed: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
   // ── 0a. Nhắc trước kickoff (T-30p, T-5p) ──
   try {
     const reminderLog = await sendKickoffReminders(now)
