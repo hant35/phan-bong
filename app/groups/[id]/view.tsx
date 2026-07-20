@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Users, Lock, Globe, Crown, Copy, Check, TrendingUp, TrendingDown, Minus, Flame, Activity, Newspaper, Sparkles, Bell, Send, X, CheckCircle2, AlertCircle, Zap, Loader2, Settings, Shield } from "lucide-react"
+import { ArrowLeft, Users, Lock, Globe, Crown, Copy, Check, TrendingUp, TrendingDown, Minus, Flame, Activity, Newspaper, Sparkles, Bell, Send, X, CheckCircle2, AlertCircle, Zap, Loader2, Settings, Shield, BarChart3 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagUrl, formatDateTimeParts, timeAgo } from "@/lib/format"
 import { HopeStarPicker } from "@/components/hope-star-picker"
@@ -208,6 +208,11 @@ export function GroupDetailView({ group, currentUserId, myRole, members, activit
               </div>
             </div>
             <div className="flex items-center justify-between gap-2 md:justify-start md:flex-shrink-0">
+              <Link href={`/groups/${group.id}/stats`}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all hover:scale-105 flex-shrink-0"
+                style={{ background: "rgba(0,188,212,0.08)", border: "1px solid rgba(0,188,212,0.15)", color: "#00bcd4" }}>
+                <BarChart3 size={11}/> Thống kê
+              </Link>
               {isGroupAdmin && (
                 <Link href={`/groups/${group.id}/admin`}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all hover:scale-105 flex-shrink-0"
